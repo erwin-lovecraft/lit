@@ -3,7 +3,7 @@ version: 2.1
 executors:
   bizgroup-executor:
     docker:
-      - image: sangnv/bizgroup-thunder:x86
+      - image: sangnv/bizgroup-thunder:latest
         environment:
           CODACY_PROJECT_TOKEN: $CODACY_PROJECT_TOKEN
           CODECOV_TOKEN: $CODECOV_TOKEN
