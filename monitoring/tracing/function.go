@@ -3,7 +3,9 @@ package tracing
 import (
 	"fmt"
 
+	"go.opentelemetry.io/otel/sdk"
 	"go.opentelemetry.io/otel/sdk/resource"
+	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 )
 
 func validateConfig(cfg Config) error {
@@ -18,11 +20,14 @@ func validateConfig(cfg Config) error {
 	return nil
 }
 
-// buildResource constructs a Resource object using OpenTelemetry defaults.
-// It automatically includes environment-based attributes such as:
-// - OTEL_SERVICE_NAME to set the service name.
-// - OTEL_RESOURCE_ATTRIBUTES for additional resource attributes.
-// The function returns the default OpenTelemetry resource configuration.
-func buildResource() *resource.Resource {
-	return resource.Default()
+// buildResource constructs a OpenTelemetry Resource object based on the provided Config
+func buildResource(cfg Config) *resource.Resource {
+	return resource.NewWithAttributes(semconv.SchemaURL,
+		semconv.ServiceNameKey.String(cfg.ServerName),
+		semconv.ServiceVersion(cfg.Version),
+		semconv.DeploymentEnvironment(cfg.Environment),
+		semconv.TelemetrySDKName("opentelemetry"),
+		semconv.TelemetrySDKLanguageGo,
+		semconv.TelemetrySDKVersion(sdk.Version()),
+	)
 }

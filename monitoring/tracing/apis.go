@@ -25,7 +25,7 @@ func Init(ctx context.Context, cfg Config) error {
 		return err
 	}
 
-	rsc := buildResource()
+	rsc := buildResource(cfg)
 
 	// Configure the trace provider
 	tracerProvider := sdktrace.NewTracerProvider(

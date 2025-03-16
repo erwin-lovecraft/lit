@@ -56,7 +56,12 @@ func New(cfg Config) (*Monitor, error) {
 	m.sentryClient = sentryClient
 
 	// Setup tracing service
-	if err := tracing.Init(context.Background(), tracing.Config{ExporterURL: cfg.OtelExporterURL}); err != nil {
+	if err := tracing.Init(context.Background(), tracing.Config{
+		ServerName:  cfg.ServerName,
+		Environment: cfg.Environment,
+		Version:     cfg.Version,
+		ExporterURL: cfg.OtelExporterURL,
+	}); err != nil {
 		// Can skip if Exporter URL not provided
 		if !errors.Is(err, tracing.ErrMissingExporterURL) {
 			return nil, err
