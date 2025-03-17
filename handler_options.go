@@ -9,3 +9,9 @@ func HandlerWithProfilingDisabled() HandlerOption {
 		c.profilingDisabled = true
 	}
 }
+
+func HandlerWithCustomLivenessEndpoint(endpoint string) HandlerOption {
+	return func(c *handlerConfig) {
+		c.livenessEndpoint = endpoint
+	}
+}

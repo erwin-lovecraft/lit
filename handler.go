@@ -11,6 +11,10 @@ import (
 	pkgerrors "github.com/pkg/errors"
 )
 
+const (
+	defaultLivenessEndpoint = "/_/healthz"
+)
+
 // Handler defines a http.Handler that adds default readiness, liveness, profiling, test routes and cors policy
 func Handler(
 	rootCtx context.Context,
@@ -20,7 +24,9 @@ func Handler(
 ) http.Handler {
 	r, hdl := NewRouter()
 
-	cfg := handlerConfig{}
+	cfg := handlerConfig{
+		livenessEndpoint: defaultLivenessEndpoint,
+	}
 	for _, opt := range opts {
 		opt(&cfg)
 	}
@@ -30,7 +36,7 @@ func Handler(
 		rtr.ginRouter.Use(cors.New(corsConf.cfg))
 	}
 
-	r.Handle(http.MethodGet, "/_/healthz", WrapF(LivenessHandlerFunc))
+	r.Handle(http.MethodGet, cfg.livenessEndpoint, WrapF(LivenessHandlerFunc))
 
 	// Usage on pprof refer to : https: //pkg.go.dev/net/http/pprof
 	// by default profilingDisabled is false
@@ -70,10 +76,11 @@ func Handler(
 func LivenessHandlerFunc(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 	w.Header().Set("X-Content-Type-Options", "nosniff")
-	_, _ = fmt.Fprintln(w, "ok")
+	_, _ = fmt.Fprint(w, "ok")
 }
 
 // handlerConfig is configurations of the Handler
 type handlerConfig struct {
 	profilingDisabled bool
+	livenessEndpoint  string // default is "/_/healthz", empty string will disable liveness endpoint
 }
