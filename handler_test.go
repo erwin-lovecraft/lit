@@ -2,6 +2,7 @@ package lit
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -93,5 +94,36 @@ func mockRouter(r Router) {
 	r.Get("/test-route", func(c Context) error {
 		c.JSON(http.StatusOK, map[string]string{"message": "Hello, World!"})
 		return nil
+	})
+}
+
+func TestHandlerWithCustomLivenessEndpoint(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+
+	const customLivenessEndpoint = "/custom-liveness"
+
+	// Create a test HTTP handler with profiling disabled
+	handler := Handler(
+		context.Background(),
+		NewCORSConfig([]string{"*"}),
+		mockRouter,
+		HandlerWithCustomLivenessEndpoint(customLivenessEndpoint),
+	)
+
+	// Create a test HTTP server
+	server := httptest.NewServer(handler)
+	defer server.Close()
+
+	t.Run("custom liveness endpoint", func(t *testing.T) {
+		req, err := http.NewRequest("GET", server.URL+customLivenessEndpoint, nil)
+		require.NoError(t, err)
+		resp, err := http.DefaultClient.Do(req)
+		require.NoError(t, err)
+		defer resp.Body.Close()
+		require.Equal(t, http.StatusOK, resp.StatusCode)
+
+		respBody, err := io.ReadAll(resp.Body)
+		require.NoError(t, err)
+		require.Equal(t, "ok", string(respBody))
 	})
 }
