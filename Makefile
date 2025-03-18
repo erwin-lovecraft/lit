@@ -10,6 +10,7 @@ COMPOSE_TOOL_RUN := $(COMPOSE_BIN) run --rm --service-ports tool
 
 init: kafka pg redis collector
 	echo "Start Kafka, Postgres, and Redis!"
+
 pg:
 	@$(COMPOSE_BIN) up postgres -d
 
@@ -21,6 +22,9 @@ collector:
 
 kafka:
 	@$(COMPOSE_BIN) up kafka -d
+
+jaeger:
+	@$(COMPOSE_BIN) up jaeger -d
 
 test:
 	@$(COMPOSE_TOOL_RUN) sh -c "go test -mod=vendor -vet=all -coverprofile=coverage.out -failfast -timeout 5m ./..."
