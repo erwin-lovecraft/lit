@@ -8,6 +8,8 @@ services:
     working_dir: /tool
     ports:
       - "3000-3005:3000-3005"
+    environment:
+      - KAFKA_URL=kafka:9092
 
   postgres:
     container_name: ${GROUP_NAME}-postgres-${ENV}
@@ -48,17 +50,12 @@ services:
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       CLUSTER_ID: "Mk3OEYBSD34fcwNTJENDM2Qk"
 
-  collector:
-    container_name: ${GROUP_NAME}-collector-${ENV}
-    image: otel/opentelemetry-collector-contrib:0.120.0
+  jaeger:
+    container_name: ${GROUP_NAME}-jaeger-${ENV}
+    image: jaegertracing/jaeger:2.4.0
     ports:
-      - 1888:1888 # pprof extension
-      - 8888:8888 # Prometheus metrics exposed by the Collector
-      - 8889:8889 # Prometheus exporter metrics
-      - 13133:13133 # health_check extension
-      - 4317:4317 # OTLP gRPC receiver
-      - 4318:4318 # OTLP http receiver
-      - 55679:55679 # zpages extension
+      - "16686:16686"
+      - "4317:4317"
 
   kafka-topics:
     image: confluentinc/cp-kafka:latest
