@@ -67,10 +67,12 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Run Unit Tests
+        uses: docker://sangnv/bizgroup-thunder:latest
         env:
           DATABASE_URL: postgres://${{ secrets.PG_USER }}:${{ secrets.PG_PASS }}@postgres:5432/${{ secrets.PG_DB }}_${{ github.run_number }}?sslmode=disable
           REDIS_URL: ${{ secrets.REDIS_URL }}
           KAFKA_URL: ${{ secrets.KAFKA_URL }}
           KAFKA_TOPIC_NAME_1: ${{ secrets.KAFKA_TOPIC_NAME_1 }}
           KAFKA_TOPIC_NAME_2: ${{ secrets.KAFKA_TOPIC_NAME_2 }}
-        run: make test
+        with:
+          args: sh -c "go test -mod=vendor -vet=all -coverprofile=coverage.out -failfast -timeout 5m ./..."
