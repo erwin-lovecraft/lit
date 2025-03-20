@@ -40,6 +40,37 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      kafka:
+        image: confluentinc/cp-kafka:latest
+        hostname: kafka
+        container_name: ${GROUP_NAME}-kafka-${ENV}
+        ports:
+          - "9092:9092"
+          - "9093:9093"
+        environment:
+          KAFKA_NODE_ID: 1
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+          KAFKA_KRAFT_MODE: "true"
+          KAFKA_PROCESS_ROLES: controller,broker
+          KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+          KAFKA_LISTENERS: PLAINTEXT://kafka:9092,CONTROLLER://kafka:9093
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+          KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+          KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+          KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+          CLUSTER_ID: "Mk3OEYBSD34fcwNTJENDM2Qk"
+          TOPIC_NAME_1: ${{ secrets.KAFKA_TOPIC_NAME_1 }}
+          TOPIC_NAME_2: ${{ secrets.KAFKA_TOPIC_NAME_2 }}
+        command: >
+          bash -c "
+            /etc/confluent/docker/run & 
+            sleep 10 &&
+            kafka-topics --create --topic $$TOPIC_NAME_1 --partitions 1 --replication-factor 1 --bootstrap-server kafka:9092
+            wait
+          "
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -53,4 +84,7 @@ jobs:
         env:
           DATABASE_URL: postgres://${{ secrets.PG_USER }}:${{ secrets.PG_PASS }}@postgres:5432/${{ secrets.PG_DB }}_${{ github.run_number }}?sslmode=disable
           REDIS_URL: ${{ secrets.REDIS_URL }}
+          KAFKA_URL: ${{ secrets.KAFKA_URL }}
+          KAFKA_TOPIC_NAME_1: ${{ secrets.KAFKA_TOPIC_NAME_1 }}
+          KAFKA_TOPIC_NAME_2: ${{ secrets.KAFKA_TOPIC_NAME_2 }}
         run: make test
