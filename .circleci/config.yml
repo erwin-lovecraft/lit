@@ -26,6 +26,9 @@ jobs:
     steps:
       - checkout
       - run:
+          name: Init Kafka
+          command: make kafka
+      - run:
           name: Run Go Tests
           command: go test -mod=vendor -coverprofile=full_coverage.out -failfast -timeout 5m ./...
       - persist_to_workspace:
