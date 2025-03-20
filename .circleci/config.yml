@@ -8,26 +8,57 @@ executors:
           CODACY_PROJECT_TOKEN: $CODACY_PROJECT_TOKEN
           CODECOV_TOKEN: $CODECOV_TOKEN
           GITHUB_AUTH_TOKEN: $GITHUB_AUTH_TOKEN
+          DATABASE_URL: postgres://lit:lit@postgres:5432/lit_db?sslmode=disable
+          REDIS_URL: redis:6379/1
+          KAFKA_URL: kafka:9092
+          KAFKA_TOPIC_NAME_1: KAFKA_TOPIC_NAME_1
+          KAFKA_TOPIC_NAME_2: KAFKA_TOPIC_NAME_2
 
 jobs:
-
-  # Stag Task
-  stag-task:
-    executor: bizgroup-executor
-    steps:
-      - checkout
-      - run:
-          name: Run Go Tests
-          command: go test -mod=vendor -coverprofile=coverage.out -failfast -timeout 5m ./...
-
   # Prod Task
   prod-task:
-    executor: bizgroup-executor
+    docker:
+        - name: tool
+          image: sangnv/bizgroup-thunder:latest
+          environment:
+            CODACY_PROJECT_TOKEN: $CODACY_PROJECT_TOKEN
+            CODECOV_TOKEN: $CODECOV_TOKEN
+            GITHUB_AUTH_TOKEN: $GITHUB_AUTH_TOKEN
+            DATABASE_URL: postgres://lit:lit@postgres:5432/lit_db?sslmode=disable
+            REDIS_URL: redis:6379/1
+            KAFKA_URL: kafka:9092
+            KAFKA_TOPIC_NAME_1: KAFKA_TOPIC_NAME_1
+            KAFKA_TOPIC_NAME_2: KAFKA_TOPIC_NAME_2
+
+        - name: postgres
+          image: postgres:latest
+          environment:
+            POSTGRES_USER: lit
+            POSTGRES_PASSWORD: lit
+            POSTGRES_DB: lit_db
+
+        - name: redis
+          image: redis:latest
+
+        - name: kafka
+          image: confluentinc/cp-kafka:latest
+          environment:
+            KAFKA_NODE_ID: 1
+            KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+            KAFKA_KRAFT_MODE: "true"
+            KAFKA_PROCESS_ROLES: controller,broker
+            KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
+            KAFKA_LISTENERS: PLAINTEXT://kafka:9092,CONTROLLER://kafka:9093
+            KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+            KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+            KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+            KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+            KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+            KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+            CLUSTER_ID: "Mk3OEYBSD34fcwNTJENDM2Qk"
+
     steps:
       - checkout
-      - run:
-          name: Init Kafka
-          command: make kafka
       - run:
           name: Run Go Tests
           command: go test -mod=vendor -coverprofile=full_coverage.out -failfast -timeout 5m ./...
@@ -67,11 +98,6 @@ workflows:
   version: 2
   dev-workflow:
     jobs:
-      - stag-task:
-          filters:
-            branches:
-              only:
-                - stag
       - prod-task:
           filters:
             branches:
