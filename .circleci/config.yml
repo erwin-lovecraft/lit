@@ -9,7 +9,7 @@ executors:
           CODECOV_TOKEN: $CODECOV_TOKEN
           GITHUB_AUTH_TOKEN: $GITHUB_AUTH_TOKEN
           DATABASE_URL: postgres://lit:lit@postgres:5432/lit_db?sslmode=disable
-          REDIS_URL: redis:6379/1
+          REDIS_URL: redis://redis:6379/1
           KAFKA_URL: kafka:9092
           KAFKA_TOPIC_NAME_1: KAFKA_TOPIC_NAME_1
           KAFKA_TOPIC_NAME_2: KAFKA_TOPIC_NAME_2
@@ -25,7 +25,7 @@ jobs:
             CODECOV_TOKEN: $CODECOV_TOKEN
             GITHUB_AUTH_TOKEN: $GITHUB_AUTH_TOKEN
             DATABASE_URL: postgres://lit:lit@postgres:5432/lit_db?sslmode=disable
-            REDIS_URL: redis:6379/1
+            REDIS_URL: redis://redis:6379/1
             KAFKA_URL: kafka:9092
             KAFKA_TOPIC_NAME_1: KAFKA_TOPIC_NAME_1
             KAFKA_TOPIC_NAME_2: KAFKA_TOPIC_NAME_2
