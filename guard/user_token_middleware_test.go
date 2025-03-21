@@ -1,6 +1,7 @@
 package guard
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -155,9 +156,9 @@ func TestAuthenticateUserMiddleware(t *testing.T) {
 					require.Equal(t, respRecord.Code, http.StatusInternalServerError)
 				}
 
-				expResult, err := json.Marshal(tc.expErr)
-				require.NoError(t, err)
-				require.Equal(t, expResult, respRecord.Body.Bytes())
+				expResult := bytes.NewBuffer(nil)
+				require.NoError(t, json.NewEncoder(expResult).Encode(tc.expErr))
+				require.Equal(t, expResult.Bytes(), respRecord.Body.Bytes())
 			} else {
 				require.Equal(t, tc.expResult, actualProfile)
 			}

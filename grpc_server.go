@@ -38,16 +38,19 @@ func NewGRPCServerWithOptions(ctx context.Context, addr string, opts ...GRPCOpti
 	}, nil
 }
 
+// Run starts gRPC server and listen for syscall
+// kill (no param) default send syscall.SIGTERM
+// kill -2 is syscall.SIGINT
+// kill -9 is syscall. SIGKILL but can't be caught, so don't need to add it
 func (srv GRPCServer) Run() error {
-	// kill (no param) default send syscall.SIGTERM
-	// kill -2 is syscall.SIGINT
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	return srv.start(ctx)
+	return srv.RunWithContext(ctx)
 }
 
-func (srv GRPCServer) start(ctx context.Context) error {
+// RunWithContext starts gRPC server and manages its lifecycle using given context
+func (srv GRPCServer) RunWithContext(ctx context.Context) error {
 	startupErr := make(chan error)
 
 	go func() {

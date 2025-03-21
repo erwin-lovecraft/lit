@@ -47,7 +47,7 @@ func TestRootMiddleware(t *testing.T) {
 				},
 			},
 			expStatus: http.StatusOK,
-			expBody:   `{"message":"pong"}`,
+			expBody:   "{\"message\":\"pong\"}",
 			expLogs: []map[string]string{
 				{"level": "INFO", "ts": "2025-02-23T18:18:48.186+0700", "msg": "Sentry DSN not provided. Not using Sentry Error Reporting", "server.name": "lightning", "environment": "dev", "version": "1.0.0"},
 				{"level": "INFO", "ts": "2025-02-23T18:18:48.186+0700", "msg": "OTelExporter URL not provided. Not using Distributed Tracing", "server.name": "lightning", "environment": "dev", "version": "1.0.0"},
@@ -73,7 +73,7 @@ func TestRootMiddleware(t *testing.T) {
 				},
 			},
 			expStatus: http.StatusOK,
-			expBody:   `{"message":"Hello lightning"}`,
+			expBody:   "{\"message\":\"Hello lightning\"}",
 			expLogs: []map[string]string{
 				{"level": "INFO", "ts": "2025-02-23T18:18:48.186+0700", "msg": "Sentry DSN not provided. Not using Sentry Error Reporting", "server.name": "lightning", "environment": "dev", "version": "1.0.0"},
 				{"level": "INFO", "ts": "2025-02-23T18:18:48.186+0700", "msg": "OTelExporter URL not provided. Not using Distributed Tracing", "server.name": "lightning", "environment": "dev", "version": "1.0.0"},
@@ -91,12 +91,12 @@ func TestRootMiddleware(t *testing.T) {
 				},
 			},
 			expStatus: http.StatusBadRequest,
-			expBody:   "{\"error\":\"validation_error\",\"error_description\":\"Invalid request\"}",
+			expBody:   "{\"error\":\"validation_error\",\"error_description\":\"Invalid request\"}\n",
 			expLogs: []map[string]string{
 				{"environment": "dev", "level": "INFO", "msg": "Sentry DSN not provided. Not using Sentry Error Reporting", "server.name": "lightning", "ts": "2025-02-23T18:43:12.5460700", "version": "1.0.0"},
 				{"environment": "dev", "level": "INFO", "msg": "OTelExporter URL not provided. Not using Distributed Tracing", "server.name": "lightning", "ts": "2025-02-23T18:43:12.5460700", "version": "1.0.0"},
-				{"environment": "dev", "http.request.body.size": "18", "http.request.method": "PATCH", "level": "INFO", "msg": `Wrote {"error":"validation_error","error_description":"Invalid request"}`, "user_agent": "", "url": "/ping", "network.peer.address": "192.0.2.1:1234", "network.protocol.version": "HTTP/1.1", "server.address": "example.com", "server.name": "lightning", "ts": "2025-02-23T18:43:12.5460700", "version": "1.0.0", "trace_id": "00000000000000000000000000000001", "span_id": "0000000000000001"},
-				{"environment": "dev", "http.request.body": `{"message":"pong"}`, "http.request.body.size": "18", "http.request.method": "PATCH", "http.response.size": "66", "http.response.status": "400", "level": "INFO", "msg": "http.incoming_request", "user_agent": "", "url": "/ping", "network.peer.address": "192.0.2.1:1234", "network.protocol.version": "HTTP/1.1", "server.address": "example.com", "server.name": "lightning", "ts": "2025-02-23T18:43:12.5460700", "version": "1.0.0", "trace_id": "00000000000000000000000000000001", "span_id": "0000000000000001"},
+				{"environment": "dev", "http.request.body.size": "18", "http.request.method": "PATCH", "level": "INFO", "msg": "Wrote {\"error\":\"validation_error\",\"error_description\":\"Invalid request\"}\n", "user_agent": "", "url": "/ping", "network.peer.address": "192.0.2.1:1234", "network.protocol.version": "HTTP/1.1", "server.address": "example.com", "server.name": "lightning", "ts": "2025-02-23T18:43:12.5460700", "version": "1.0.0", "trace_id": "00000000000000000000000000000001", "span_id": "0000000000000001"},
+				{"environment": "dev", "http.request.body": "{\"message\":\"pong\"}", "http.request.body.size": "18", "http.request.method": "PATCH", "http.response.size": "67", "http.response.status": "400", "level": "INFO", "msg": "http.incoming_request", "user_agent": "", "url": "/ping", "network.peer.address": "192.0.2.1:1234", "network.protocol.version": "HTTP/1.1", "server.address": "example.com", "server.name": "lightning", "ts": "2025-02-23T18:43:12.5460700", "version": "1.0.0", "trace_id": "00000000000000000000000000000001", "span_id": "0000000000000001"},
 			},
 		},
 		"error - PANIC request": {
@@ -109,12 +109,12 @@ func TestRootMiddleware(t *testing.T) {
 				},
 			},
 			expStatus: http.StatusInternalServerError,
-			expBody:   "{\"error\":\"internal_server_error\",\"error_description\":\"Something went wrong\"}",
+			expBody:   "{\"error\":\"internal_server_error\",\"error_description\":\"Something went wrong\"}\n",
 			expLogs: []map[string]string{
 				{"environment": "dev", "level": "INFO", "msg": "Sentry DSN not provided. Not using Sentry Error Reporting", "server.name": "lightning", "ts": "2025-02-23T18:43:12.5460700", "version": "1.0.0"},
 				{"environment": "dev", "level": "INFO", "msg": "OTelExporter URL not provided. Not using Distributed Tracing", "server.name": "lightning", "ts": "2025-02-23T18:43:12.5460700", "version": "1.0.0"},
 				{"environment": "dev", "level": "ERROR", "msg": "Caught a panic", "http.request.body.size": "18", "http.request.method": "PATCH", "error.kind": "*errors.errorString", "error.message": "simulated panic", "user_agent": "", "url": "/ping", "network.peer.address": "192.0.2.1:1234", "network.protocol.version": "HTTP/1.1", "server.address": "example.com", "server.name": "lightning", "ts": "2025-02-23T18:43:12.5460700", "version": "1.0.0", "trace_id": "00000000000000000000000000000001", "span_id": "0000000000000001"},
-				{"environment": "dev", "level": "INFO", "msg": `Wrote {"error":"internal_server_error","error_description":"Something went wrong"}`, "http.request.body.size": "18", "http.request.method": "PATCH", "user_agent": "", "url": "/ping", "network.peer.address": "192.0.2.1:1234", "network.protocol.version": "HTTP/1.1", "server.address": "example.com", "server.name": "lightning", "ts": "2025-02-23T18:43:12.5460700", "version": "1.0.0", "trace_id": "00000000000000000000000000000001", "span_id": "0000000000000001"},
+				{"environment": "dev", "level": "INFO", "msg": "Wrote {\"error\":\"internal_server_error\",\"error_description\":\"Something went wrong\"}\n", "http.request.body.size": "18", "http.request.method": "PATCH", "user_agent": "", "url": "/ping", "network.peer.address": "192.0.2.1:1234", "network.protocol.version": "HTTP/1.1", "server.address": "example.com", "server.name": "lightning", "ts": "2025-02-23T18:43:12.5460700", "version": "1.0.0", "trace_id": "00000000000000000000000000000001", "span_id": "0000000000000001"},
 			},
 		},
 	}

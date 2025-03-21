@@ -8,7 +8,7 @@ DOCKER_BUILD_BIN := docker
 COMPOSE_BIN := ENV=$(ENV) GROUP_NAME=$(GROUP_NAME) PROJECT_NAME=$(PROJECT_NAME) docker compose
 COMPOSE_TOOL_RUN := $(COMPOSE_BIN) run --rm --service-ports tool
 
-init: kafka pg redis collector
+init: kafka pg redis
 	echo "Start Kafka, Postgres, and Redis!"
 
 pg:
@@ -16,9 +16,6 @@ pg:
 
 redis:
 	@$(COMPOSE_BIN) up redis -d
-
-collector:
-	@$(COMPOSE_BIN) up collector -d
 
 kafka:
 	@$(COMPOSE_BIN) up kafka -d

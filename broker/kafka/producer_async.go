@@ -60,7 +60,7 @@ func NewAsyncProducer(
 		instSegments: make(map[string]instrumentkafka.PublishSegment),
 	}
 
-	monitor.Infof("Kafka async producer initialized. Host: [%s], Port: [%s]",
+	monitor.Infof("Kafka AsyncProducer initialized. Host: [%s], Port: [%s]",
 		ap.extSvcInfo.Hostname,
 		ap.extSvcInfo.Port,
 	)

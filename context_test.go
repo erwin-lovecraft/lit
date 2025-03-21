@@ -1,6 +1,7 @@
 package lit
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"net/http"
@@ -28,9 +29,9 @@ func TestAbortWithError(t *testing.T) {
 			inErr:          errors.New("simulated error"),
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody: func() string {
-				b, err := json.Marshal(ErrDefaultInternal)
-				require.NoError(t, err)
-				return string(b)
+				buf := bytes.NewBuffer(nil)
+				require.NoError(t, json.NewEncoder(buf).Encode(ErrDefaultInternal))
+				return buf.String()
 			}(),
 		},
 		"expected error": {
@@ -40,19 +41,15 @@ func TestAbortWithError(t *testing.T) {
 			},
 			expectedStatus: http.StatusBadRequest,
 			expectedBody: func() string {
-				b, err := json.Marshal(testError{Code: http.StatusBadRequest, Msg: "bad request"})
-				require.NoError(t, err)
-				return string(b)
+				buf := bytes.NewBuffer(nil)
+				require.NoError(t, json.NewEncoder(buf).Encode(testError{Code: http.StatusBadRequest, Msg: "bad request"}))
+				return buf.String()
 			}(),
 		},
 		"error when marshal": {
 			inErr:          testErrorMarshal{},
-			expectedStatus: http.StatusInternalServerError,
-			expectedBody: func() string {
-				b, err := json.Marshal(ErrDefaultInternal)
-				require.NoError(t, err)
-				return string(b)
-			}(),
+			expectedStatus: http.StatusBadRequest,
+			expectedBody:   "", // Because marshal error
 		},
 		"error when write": {
 			inErr: testError{

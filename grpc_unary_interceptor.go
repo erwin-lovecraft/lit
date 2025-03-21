@@ -13,10 +13,6 @@ import (
 	"github.com/viebiz/lit/monitoring/instrumentgrpc"
 )
 
-const (
-	shouldLogGRPCResponse = true
-)
-
 func unaryServerInterceptor(rootCtx context.Context) grpc.UnaryServerInterceptor {
 	return func(ctx context.Context, req interface{}, info *grpc.UnaryServerInfo, handler grpc.UnaryHandler) (rs any, err error) {
 		// Start tracing for incoming unary call request
@@ -35,11 +31,17 @@ func unaryServerInterceptor(rootCtx context.Context) grpc.UnaryServerInterceptor
 			}
 		}()
 
+		// Log incoming grpc call
+		logIncomingGRPCCall(ctx, reqMeta)
+
 		rs, err = handler(ctx, req)
 
 		endInstrumentation(err)
 
-		logIncomingGRPCCall(ctx, reqMeta, rs)
+		// Log response body
+		monitoring.FromContext(ctx).
+			WithTag("grpc.response_body", string(parseProtoMessage(rs))).
+			Infof("Wrote gRPC response")
 
 		return rs, err
 	}
@@ -59,21 +61,17 @@ func parseProtoMessage(resp any) []byte {
 	return b
 }
 
-func logIncomingGRPCCall(ctx context.Context, reqMeta instrumentgrpc.RequestMetadata, result any) {
-	//logFields := []monitoring.LogField{
-	//	monitoring.Field("grpc.service_method", reqMeta.ServiceMethod),
-	//}
-	//
-	//// BodyToLog always have `{}`
-	//if len(reqMeta.BodyToLog) > 2 {
-	//	logFields = append(logFields, monitoring.Field("grpc.request_body", reqMeta.BodyToLog))
-	//}
-	//
-	//if resultToLog := parseProtoMessage(result); len(resultToLog) > 2 && shouldLogGRPCResponse {
-	//	logFields = append(logFields, monitoring.Field("grpc.response_body", parseProtoMessage(result)))
-	//}
-	//
-	//monitoring.FromContext(ctx).
-	//	With(logFields...).
-	//	Infof("grpc.unary_incoming_call")
+func logIncomingGRPCCall(ctx context.Context, reqMeta instrumentgrpc.RequestMetadata) {
+	logTags := map[string]string{
+		"grpc.service_method": reqMeta.ServiceMethod,
+	}
+
+	// Also skip logging if the request body is empty, by default protojson marshaler will return "{}"
+	if len(reqMeta.BodyToLog) > 2 {
+		logTags["grpc.request_body"] = string(reqMeta.BodyToLog)
+	}
+
+	monitoring.FromContext(ctx).
+		With(logTags).
+		Infof("grpc.unary_incoming_call")
 }

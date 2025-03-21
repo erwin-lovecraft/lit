@@ -117,21 +117,13 @@ func (c litContext) AbortWithError(obj error) {
 		}
 	}
 
-	// Marshal the response payload
-	respBytes, err := json.Marshal(errBody)
-	if err != nil {
-		monitoring.FromContext(c).Errorf(err, "[AbortWithError] JSON marshal failed, using ErrDefaultInternal")
-		if respBytes, err = json.Marshal(ErrDefaultInternal); err != nil {
-			monitoring.FromContext(c).Errorf(err, "[AbortWithError] JSON marshal of ErrDefaultInternal failed") // Should never happen
-			respBytes = []byte(`{}`)
-		}
+	// Abort middleware chain and write header immediately
+	c.AbortWithStatus(status)
 
-		status = http.StatusInternalServerError
-	}
-
-	// Write response
-	c.AbortWithStatus(status) // Abort and write header now
-	if _, writeErr := c.Writer().Write(respBytes); writeErr != nil {
-		monitoring.FromContext(c).Errorf(writeErr, "[AbortWithError] Write failed")
+	// Write response body
+	// Always return a new line at the end of the response body
+	//https://stackoverflow.com/questions/36319918/why-does-json-encoder-add-an-extra-line
+	if err := json.NewEncoder(c.Writer()).Encode(errBody); err != nil {
+		monitoring.FromContext(c).Errorf(err, "[http_server] Write response failed")
 	}
 }

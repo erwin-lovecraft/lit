@@ -38,12 +38,12 @@ type messageHandler struct {
 func (h messageHandler) Setup(s sarama.ConsumerGroupSession) error {
 	h.monitor.
 		WithTag("kafka_consumer_member_id", s.MemberID()).
-		Infof("[Kafka ConsumerGroup] ConsumerGroup Ready. GenerationID: [%d], Member ID: [%s], Partition Allocation: [%v], ", s.GenerationID(), s.MemberID(), s.Claims())
+		Infof("[kafka_consumer] ConsumerGroup Ready. GenerationID: [%d], Member ID: [%s], Partition Allocation: [%v], ", s.GenerationID(), s.MemberID(), s.Claims())
 	return nil
 }
 
 func (h messageHandler) Cleanup(sarama.ConsumerGroupSession) error {
-	h.monitor.Infof("[Kafka ConsumerGroup] Cleaning up...")
+	h.monitor.Infof("[kafka_consumer] Cleaning up...")
 	return nil
 }
 
@@ -74,9 +74,9 @@ func (h messageHandler) consume(s sarama.ConsumerGroupSession, cm *sarama.Consum
 	}()
 
 	if h.disablePayloadLogging {
-		monitor.Infof("[Kafka ConsumerGroup] Consuming: Partition: [%d], Offset: [%d]", cm.Partition, cm.Offset)
+		monitor.Infof("[kafka_consumer] Consuming: Partition: [%d], Offset: [%d]", cm.Partition, cm.Offset)
 	} else {
-		monitor.Infof("[Kafka ConsumerGroup] Consuming: Partition: [%d], Offset: [%d], Payload: [%s]", cm.Partition, cm.Offset, cm.Value)
+		monitor.Infof("[kafka_consumer] Consuming: Partition: [%d], Offset: [%d], Payload: [%s]", cm.Partition, cm.Offset, cm.Value)
 	}
 
 	msg := ConsumerMessage{
@@ -99,7 +99,7 @@ func (h messageHandler) consume(s sarama.ConsumerGroupSession, cm *sarama.Consum
 
 	if err = backoff.Retry(func() error {
 		attempts++
-		monitor.Infof("[Kafka ConsumerGroup] Consuming Attempt: [%d]", attempts)
+		monitor.Infof("[kafka_consumer] Consuming Attempt: [%d]", attempts)
 
 		if err = h.handler(ctx, msg); err != nil {
 			monitor.Errorf(err, "consume message failed")
@@ -107,12 +107,12 @@ func (h messageHandler) consume(s sarama.ConsumerGroupSession, cm *sarama.Consum
 		}
 		return nil
 	}, backoff.WithContext(consumeBackoff(h.maxRetriesPerMsg), ctx)); err != nil {
-		monitor.Infof("[Kafka ConsumerGroup] Giving up on processing. Partition: [%d], Offset: [%d] after [%d] attempts. Will just commit and move on", cm.Partition, cm.Offset, attempts)
+		monitor.Infof("[kafka_consumer] Giving up on processing. Partition: [%d], Offset: [%d] after [%d] attempts. Will just commit and move on", cm.Partition, cm.Offset, attempts)
 	}
 
 	h.commitMessageOffset(ctx, s, msg.ID)
 
-	monitor.Infof("[Kafka ConsumerGroup] Consumed: Partition: [%d], Offset: [%d]", cm.Partition, cm.Offset)
+	monitor.Infof("[kafka_consumer] Consumed: Partition: [%d], Offset: [%d]", cm.Partition, cm.Offset)
 }
 
 // CommitMessageOffset commits the message's offset+1 for the topic & partition
