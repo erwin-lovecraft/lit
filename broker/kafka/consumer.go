@@ -65,7 +65,7 @@ func NewConsumerGroup(
 		extSvcInfo:            monitoring.NewExternalServiceInfo(brokers[0]),
 	}
 
-	newMonitor.Infof("Kafka consumer initialized. Hostname: [%s], Port: [%s]",
+	newMonitor.Infof("Kafka Consumer initialized. Hostname: [%s], Port: [%s]",
 		msgHandler.extSvcInfo.Hostname,
 		msgHandler.extSvcInfo.Port,
 	)

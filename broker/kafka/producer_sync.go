@@ -54,7 +54,7 @@ func NewSyncProducer(
 		clientID:   producerCfg.ClientID,
 	}
 
-	monitor.Infof("Kafka sync producer initialized. Host [%s], Port: [%s]",
+	monitor.Infof("Kafka SyncProducer initialized. Host [%s], Port: [%s]",
 		sp.extSvcInfo.Hostname,
 		sp.extSvcInfo.Port,
 	)
