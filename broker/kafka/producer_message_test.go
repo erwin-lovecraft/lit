@@ -6,6 +6,7 @@ import (
 
 	"github.com/IBM/sarama"
 	"github.com/stretchr/testify/require"
+	"github.com/viebiz/lit/testutil"
 )
 
 func TestPrepareProducerMessage(t *testing.T) {
@@ -72,7 +73,7 @@ func TestPrepareProducerMessage(t *testing.T) {
 			}
 			require.Equal(t, tc.expMsg.Topic, pm.Topic)
 			require.Equal(t, tc.expMsg.Partition, pm.Partition)
-			require.Equal(t, tc.expMsg.Headers, pm.Headers)
+			testutil.Equal(t, tc.expMsg.Headers, pm.Headers)
 			require.Equal(t, tc.expMsg.Offset, pm.Offset)
 			require.Equal(t, tc.expMsg.Timestamp, pm.Timestamp)
 

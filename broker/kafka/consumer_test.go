@@ -16,7 +16,7 @@ func getKafkaURL() string {
 	if url := os.Getenv("KAFKA_URL"); url != "" {
 		return url
 	}
-	return "localhost:9093"
+	return "localhost:9092"
 }
 
 func TestNewConsumer(t *testing.T) {
