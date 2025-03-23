@@ -13,7 +13,7 @@ import (
 	"github.com/viebiz/lit/monitoring"
 )
 
-func StartGRPCUnaryCallSegment(ctx context.Context, svcInfo monitoring.ExternalServiceInfo, fullMethod string) (context.Context, func(error)) {
+func StartUnaryCallSegment(ctx context.Context, svcInfo monitoring.ExternalServiceInfo, fullMethod string) (context.Context, func(error)) {
 	logTags := map[string]string{
 		rpcSystemKey:     "grpc",
 		serverAddressKey: svcInfo.Hostname + ":" + svcInfo.Port,
@@ -48,7 +48,6 @@ func StartGRPCUnaryCallSegment(ctx context.Context, svcInfo monitoring.ExternalS
 
 	otel.GetTextMapPropagator().Inject(ctx, mdCarrier(md))
 	ctx = metadata.NewOutgoingContext(ctx, md)
-	// ? Baggage
 
 	m := monitoring.InjectOutgoingTracingInfo(monitoring.FromContext(ctx), span.SpanContext())
 	m = m.With(logTags)

@@ -73,7 +73,7 @@ func TestPrepareProducerMessage(t *testing.T) {
 			}
 			require.Equal(t, tc.expMsg.Topic, pm.Topic)
 			require.Equal(t, tc.expMsg.Partition, pm.Partition)
-			testutil.Equal(t, tc.expMsg.Headers, pm.Headers)
+			testutil.Equal(t, tc.expMsg.Headers, pm.Headers, testutil.IgnoreSliceOrder[sarama.RecordHeader]())
 			require.Equal(t, tc.expMsg.Offset, pm.Offset)
 			require.Equal(t, tc.expMsg.Timestamp, pm.Timestamp)
 

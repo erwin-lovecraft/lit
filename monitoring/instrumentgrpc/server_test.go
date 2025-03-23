@@ -1,65 +1,127 @@
 package instrumentgrpc
 
-//func TestStartUnaryIncomingCall(t *testing.T) {
-//	// Given
-//	tp := mocktracer.Start()
-//	defer tp.Stop()
-//
-//	logBuffer := bytes.NewBuffer(nil)
-//	m, err := monitoring.New(monitoring.Config{Writer: logBuffer})
-//	require.NoError(t, err)
-//
-//	reqCtx := context.Background()
-//	reqCtx = peer.NewContext(reqCtx, &peer.Peer{
-//		Addr: &net.TCPAddr{
-//			Port: 50051,
-//		},
-//	})
-//
-//	reqCtx = metadata.NewIncomingContext(reqCtx, metadata.New(map[string]string{
-//		"traceparent": "00-deadbeefcafebabefeedfacebadc0de1-abad1dea0ddba11c-01",
-//		"tracestate":  "test=test-value",
-//		"baggage":     "user_id=1234,role=admin",
-//	}))
-//
-//	// When
-//	ctx, reqMeta, end := StartUnaryIncomingCall(reqCtx, m, "/weather.WeatherService/GetWeatherInfo", &testdata.WeatherRequest{
-//		Date: "M41.993.32",
-//	})
-//
-//	// Then
-//	monitoring.FromContext(ctx).Infof("Got incoming request")
-//	expectedLogs := []map[string]interface{}{
-//		{
-//			"level":    "info",
-//			"msg":      "Got incoming request",
-//			"span_id":  "0000000000000000",                 // Random generated value
-//			"trace_id": "deadbeefcafebabefeedfacebadc0de1", // Should sample with incoming request
-//		},
-//	}
-//	requireEqual(t, expectedLogs, monitor.GetLogs(t), cmpopts.IgnoreMapEntries(func(key string, value interface{}) bool {
-//		return key == "ts" || key == "span_id"
-//	}))
-//
-//	// 3.2. Validate request metadata
-//	requireEqual(t, RequestMetadata{
-//		ServiceMethod: "/weather.WeatherService/GetWeatherInfo",
-//		BodyToLog:     []uint8(`{"date":"M41.993.32"}`),
-//	}, reqMeta, cmpopts.IgnoreFields(RequestMetadata{}, "ContextData"))
-//	require.ElementsMatch(t, []string{"user_id=1234", "role=admin"}, reqMeta.ContextData)
-//
-//	// 3.3. Simulated end instrument
-//	require.NotNil(t, end)
-//	end(nil)
-//
-//	// 3.4. Validate trace attributes
-//	expectedAttributes := []attribute.KeyValue{
-//		semconv.RPCSystemGRPC,
-//		semconv.NetworkPeerAddress(":50051"),
-//		semconv.NetworkTransportTCP,
-//		semconv.RPCService("weather.WeatherService"),
-//		semconv.RPCMethod("GetWeatherInfo"),
-//		semconv.RPCGRPCStatusCodeOk,
-//	}
-//	require.ElementsMatch(t, expectedAttributes, monitor.GetSpans().Snapshots()[0].Attributes())
-//}
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"net"
+	"testing"
+
+	"github.com/stretchr/testify/require"
+	"github.com/viebiz/lit/grpcclient/testdata"
+	"github.com/viebiz/lit/monitoring"
+	"github.com/viebiz/lit/monitoring/tracing/mocktracer"
+	"github.com/viebiz/lit/testutil"
+	"go.opentelemetry.io/otel/trace"
+	"google.golang.org/grpc/metadata"
+	"google.golang.org/grpc/peer"
+)
+
+func TestStartUnaryIncomingCall_NoCurSpan(t *testing.T) {
+	tp := mocktracer.Start()
+	defer tp.Stop()
+
+	logBuf := bytes.NewBuffer(nil)
+	m, err := monitoring.New(monitoring.Config{Writer: logBuf})
+	require.NoError(t, err)
+
+	// Given
+	reqCtx := context.Background()
+	reqCtx = peer.NewContext(reqCtx, &peer.Peer{
+		Addr: &net.TCPAddr{
+			Port: 50051,
+		},
+	})
+
+	// When
+	ctx, reqMeta, endFunc := StartUnaryIncomingCall(reqCtx, m, "/weather.WeatherService/GetWeatherInfo", &testdata.WeatherRequest{
+		Date: "M41.993.32",
+	})
+
+	// Then
+	requireTraceContextPresent(t, ctx)
+	require.Equal(t, "/weather.WeatherService/GetWeatherInfo", reqMeta.ServiceMethod)
+	var reqBody map[string]interface{}
+	require.NoError(t, json.Unmarshal(reqMeta.BodyToLog, &reqBody))
+	testutil.Equal(t, map[string]interface{}{"date": "M41.993.32"}, reqBody)
+	endFunc(nil)
+}
+
+func TestStartUnaryIncomingCall_WihCurSpan(t *testing.T) {
+	tp := mocktracer.Start()
+	defer tp.Stop()
+
+	logBuf := bytes.NewBuffer(nil)
+	m, err := monitoring.New(monitoring.Config{Writer: logBuf})
+	require.NoError(t, err)
+
+	// Given
+	expTraceID := "deadbeefcafebabefeedfacebadc0de1"
+	reqCtx := context.Background()
+	reqCtx = peer.NewContext(reqCtx, &peer.Peer{
+		Addr: &net.TCPAddr{
+			Port: 50051,
+		},
+	})
+	reqCtx = metadata.NewIncomingContext(reqCtx, metadata.New(map[string]string{
+		"traceparent": fmt.Sprintf("00-%s-abad1dea0ddba11c-01", expTraceID),
+	}))
+
+	// When
+	ctx, reqMeta, endFunc := StartUnaryIncomingCall(reqCtx, m, "/weather.WeatherService/GetWeatherInfo", &testdata.WeatherRequest{
+		Date: "M41.993.32",
+	})
+
+	// Then
+	requireTraceContextPresent(t, ctx)
+	requireTraceIDMatch(t, expTraceID, trace.SpanFromContext(ctx))
+	require.Equal(t, "/weather.WeatherService/GetWeatherInfo", reqMeta.ServiceMethod)
+	var reqBody map[string]interface{}
+	require.NoError(t, json.Unmarshal(reqMeta.BodyToLog, &reqBody))
+	testutil.Equal(t, map[string]interface{}{"date": "M41.993.32"}, reqBody)
+	endFunc(nil)
+}
+
+func TestStartUnaryIncomingCall_EndWithError(t *testing.T) {
+	tp := mocktracer.Start()
+	defer tp.Stop()
+
+	logBuf := bytes.NewBuffer(nil)
+	m, err := monitoring.New(monitoring.Config{Writer: logBuf})
+	require.NoError(t, err)
+
+	// Given
+	reqCtx := context.Background()
+	reqCtx = peer.NewContext(reqCtx, &peer.Peer{
+		Addr: &net.TCPAddr{
+			Port: 50051,
+		},
+	})
+
+	// When
+	ctx, reqMeta, endFunc := StartUnaryIncomingCall(reqCtx, m, "/weather.WeatherService/GetWeatherInfo", &testdata.WeatherRequest{
+		Date: "M41.993.32",
+	})
+
+	// Then
+	requireTraceContextPresent(t, ctx)
+	require.Equal(t, "/weather.WeatherService/GetWeatherInfo", reqMeta.ServiceMethod)
+	var reqBody map[string]interface{}
+	require.NoError(t, json.Unmarshal(reqMeta.BodyToLog, &reqBody))
+	testutil.Equal(t, map[string]interface{}{"date": "M41.993.32"}, reqBody)
+	endFunc(errors.New("simulated error"))
+}
+
+func requireTraceContextPresent(t *testing.T, ctx context.Context) {
+	t.Helper()
+	span := trace.SpanFromContext(ctx)
+	require.NotNil(t, span, "span should be present")
+	require.True(t, span.SpanContext().IsValid(), "span context should be valid")
+}
+
+func requireTraceIDMatch(t *testing.T, expectedID string, span trace.Span) {
+	t.Helper()
+	require.Equal(t, expectedID, span.SpanContext().TraceID().String())
+}

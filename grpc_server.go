@@ -16,6 +16,7 @@ type GRPCServer struct {
 	addr       string
 }
 
+// NewGRPCServer creates new gRPC server
 func NewGRPCServer(ctx context.Context, addr string) (GRPCServer, error) {
 	opts := []GRPCOption{
 		WithDefaultInterceptors(ctx),
@@ -24,6 +25,7 @@ func NewGRPCServer(ctx context.Context, addr string) (GRPCServer, error) {
 	return NewGRPCServerWithOptions(ctx, addr, opts...)
 }
 
+// NewGRPCServerWithOptions creates a new gRPC server with provided option
 func NewGRPCServerWithOptions(ctx context.Context, addr string, opts ...GRPCOption) (GRPCServer, error) {
 	var serverOpts []grpc.ServerOption
 	for _, opt := range opts {

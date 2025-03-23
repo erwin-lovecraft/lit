@@ -2,8 +2,8 @@ package instrumentgrpc
 
 import (
 	"context"
-	"strings"
 
+	"github.com/viebiz/lit/monitoring"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -12,10 +12,6 @@ import (
 	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/encoding/protojson"
-	"google.golang.org/protobuf/proto"
-
-	"github.com/viebiz/lit/monitoring"
 )
 
 func StartUnaryIncomingCall(ctx context.Context, m *monitoring.Monitor, fullMethod string, req any) (context.Context, RequestMetadata, func(error)) {
@@ -97,30 +93,4 @@ func StartUnaryIncomingCall(ctx context.Context, m *monitoring.Monitor, fullMeth
 type RequestMetadata struct {
 	ServiceMethod string
 	BodyToLog     []byte
-}
-
-// extractFullMethod extracts full method /weather.WeatherService/GetWeatherInfo
-func extractFullMethod(fullMethod string) (string, string) {
-	parts := strings.Split(fullMethod, "/")
-	if len(parts) == 3 {
-		return parts[1], parts[2]
-	}
-
-	return parts[0], ""
-}
-
-// serializeProtoMessage converts protobuf request to JSON bytes
-// output may be unstable due to known issues: https://github.com/golang/protobuf/issues/1121
-func serializeProtoMessage(req any) []byte {
-	msg, ok := req.(proto.Message)
-	if !ok {
-		return nil // Ignore req body if it not proto message
-	}
-
-	b, err := protojson.Marshal(msg)
-	if err != nil {
-		return nil // Ignore if it is invalid proto message
-	}
-
-	return b
 }
