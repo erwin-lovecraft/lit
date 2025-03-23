@@ -1,6 +1,10 @@
 package testutil
 
 import (
+	"fmt"
+	"reflect"
+	"strings"
+
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
@@ -83,5 +87,36 @@ func (e equateComparable[T]) toCmpOption() cmp.Option {
 func EquateComparable[T any](typs ...any) Option[T] {
 	return equateComparable[T]{
 		Option: cmpopts.EquateComparable(typs...),
+	}
+}
+
+type sortSlicesOption[S []T, T any] struct {
+	cmp.Option
+}
+
+func (e sortSlicesOption[S, T]) check(S) {}
+
+func (e sortSlicesOption[S, T]) toCmpOption() cmp.Option {
+	return e.Option
+}
+
+func SortSlices[S []T, T any](cmpFunc func(T, T) int) Option[S] {
+	return sortSlicesOption[S, T]{
+		Option: cmpopts.SortSlices(cmpFunc),
+	}
+}
+
+func IgnoreSliceOrder[T any]() Option[[]T] {
+	return sortSlicesOption[[]T, T]{
+		Option: cmpopts.SortSlices(func(a, b T) int {
+			va := reflect.ValueOf(a)
+			vb := reflect.ValueOf(b)
+
+			// Convert to strings for comparison
+			aStr := fmt.Sprintf("%v", va.Interface())
+			bStr := fmt.Sprintf("%v", vb.Interface())
+
+			return strings.Compare(aStr, bStr)
+		}),
 	}
 }

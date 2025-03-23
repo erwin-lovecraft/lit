@@ -10,13 +10,15 @@ services:
       - "3000-3005:3000-3005"
     environment:
       - KAFKA_URL=kafka:9092
+      - DATABASE_URL=postgres://lit:@postgres:5432/master
+      - REDIS_URL=redis://redis:6379
 
   postgres:
     container_name: ${GROUP_NAME}-postgres-${ENV}
     image: postgres:latest
     environment:
       - POSTGRES_USER=lit
-      - POSTGRES_PASSWORD=lit
+      - POSTGRES_HOST_AUTH_METHOD=trust
       - POSTGRES_DB=master
     ports:
       - 54321:5432

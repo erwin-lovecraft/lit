@@ -27,7 +27,7 @@ func unaryClientInterceptor(
 		}
 	}
 
-	ctx, end := instrumentgrpc.StartGRPCUnaryCallSegment(ctx, extSvcInfo.info, method)
+	ctx, end := instrumentgrpc.StartUnaryCallSegment(ctx, extSvcInfo.info, method)
 	defer func() {
 		end(err)
 	}()

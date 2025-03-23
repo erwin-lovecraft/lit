@@ -1,6 +1,7 @@
 package testutil
 
 import (
+	gocmp "cmp"
 	"testing"
 
 	"github.com/stretchr/testify/mock"
@@ -293,4 +294,70 @@ func TestEqualWithEquateComparable(t *testing.T) {
 	given := spaceMarine{Name: "Gabriel Angelos", Age: 300, Faction: "Blood Ravens", isFallen: true}
 
 	Equal(t, expected, given, EquateComparable[spaceMarine](spaceMarine{}))
+}
+
+func TestEqualWithSortSlice(t *testing.T) {
+	// Basic type
+	// Given
+	expected := []int{1, 2, 3, 4}
+	given := []int{4, 3, 2, 1}
+
+	// When
+	// Then
+	Equal(t, expected, given, SortSlices[[]int](gocmp.Compare))
+
+	// Struct type
+	// Given
+	type spaceMarine struct {
+		Name    string
+		Age     int
+		Faction string
+	}
+	gv := []spaceMarine{
+		{Name: "Tarkus", Age: 100, Faction: "Blood Ravens"},
+		{Name: "Gabriel Angelos", Age: 300, Faction: "Blood Ravens"},
+		{Name: "Cyrus", Age: 150, Faction: "Blood Ravens"},
+	}
+	exp := []spaceMarine{
+		{Name: "Gabriel Angelos", Age: 300, Faction: "Blood Ravens"},
+		{Name: "Tarkus", Age: 100, Faction: "Blood Ravens"},
+		{Name: "Cyrus", Age: 150, Faction: "Blood Ravens"},
+	}
+	// When
+	// Then
+	Equal(t, exp, gv, SortSlices(func(t, t2 spaceMarine) int {
+		return t.Age - t2.Age
+	}))
+}
+
+func TestEqualWithIgnoreSliceOrder(t *testing.T) {
+	// Basic type
+	// Given
+	expected := []int{1, 2, 3, 4}
+	given := []int{4, 3, 2, 1}
+
+	// When
+	// Then
+	Equal(t, expected, given, IgnoreSliceOrder[int]())
+
+	// Struct type
+	// Given
+	type spaceMarine struct {
+		Name    string
+		Age     int
+		Faction string
+	}
+	gv := []spaceMarine{
+		{Name: "Tarkus", Age: 100, Faction: "Blood Ravens"},
+		{Name: "Gabriel Angelos", Age: 300, Faction: "Blood Ravens"},
+		{Name: "Cyrus", Age: 150, Faction: "Blood Ravens"},
+	}
+	exp := []spaceMarine{
+		{Name: "Gabriel Angelos", Age: 300, Faction: "Blood Ravens"},
+		{Name: "Tarkus", Age: 100, Faction: "Blood Ravens"},
+		{Name: "Cyrus", Age: 150, Faction: "Blood Ravens"},
+	}
+	// When
+	// Then
+	Equal(t, exp, gv, IgnoreSliceOrder[spaceMarine]())
 }
