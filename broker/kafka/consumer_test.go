@@ -20,7 +20,6 @@ func getKafkaURL() string {
 }
 
 func TestNewConsumer(t *testing.T) {
-
 	type arg struct {
 		givenBrokerURL            string
 		givenAppCfg               Config
