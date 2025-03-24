@@ -9,6 +9,13 @@ import (
 // ConsumerOption overrides the properties of a consumer
 type ConsumerOption func(*consumerConfig)
 
+// ConsumerWithTLS sets the TLS config for the consumer
+func ConsumerWithTLS(tlsCfg *tls.Config) ConsumerOption {
+	return func(c *consumerConfig) {
+		configWithTLS(c.Config, tlsCfg)
+	}
+}
+
 // ConsumerWithOffsetNewest option with offset newest, default is oldest.
 func ConsumerWithOffsetNewest() ConsumerOption {
 	return func(c *consumerConfig) {
@@ -35,13 +42,6 @@ func ConsumerWithAutoCreateTopics() ConsumerOption {
 func ConsumerWithCustomConsumerGroupID(id string) ConsumerOption {
 	return func(c *consumerConfig) {
 		c.groupID = id
-	}
-}
-
-// ConsumerWithTLS sets the TLS config for the consumer
-func ConsumerWithTLS(tlsCfg *tls.Config) ConsumerOption {
-	return func(c *consumerConfig) {
-		configWithTLS(c.Config, tlsCfg)
 	}
 }
 
