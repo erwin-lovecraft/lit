@@ -28,6 +28,7 @@ func TestStartIncomingRequest(t *testing.T) {
 		givenURL             string
 		givenMethod          string
 		givenHeaders         map[string]string
+		givenQuery           map[string]string
 		givenBody            io.Reader
 		givenStatus          int
 		givenRespErr         error
@@ -52,9 +53,40 @@ func TestStartIncomingRequest(t *testing.T) {
 			}),
 			expAttributes: []attribute.KeyValue{
 				semconv.HTTPRequestMethodKey.String(http.MethodGet),
-				semconv.ServerAddressKey.String("example.com"),
+				semconv.HTTPRoute("/api/v1/users"),
+				semconv.URLPath("/api/v1/users"),
+				semconv.URLScheme("https"),
 				semconv.UserAgentOriginal(""),
-				semconv.URLFull("/api/v1/users"),
+				semconv.ServerAddressKey.String("example.com"),
+				semconv.NetworkPeerAddress("192.0.2.1:1234"),
+				semconv.NetworkProtocolVersion("HTTP/1.1"),
+				semconv.HTTPResponseStatusCode(http.StatusOK),
+			},
+		},
+		"GET with query params": {
+			givenURL:    "/api/v1/users",
+			givenMethod: http.MethodGet,
+			givenQuery: map[string]string{
+				"page": "1",
+				"size": "10",
+				"sort": "desc",
+			},
+			givenStatus:          http.StatusOK,
+			expSpanKind:          trace.SpanKindServer,
+			expParentSpanContext: trace.NewSpanContext(trace.SpanContextConfig{Remote: true}),
+			expSpanContext: trace.NewSpanContext(trace.SpanContextConfig{
+				TraceID:    testutil.NewTraceID(t, fmt.Sprintf("%032x", 1)),
+				SpanID:     testutil.NewSpanID(t, fmt.Sprintf("%016x", 1)),
+				TraceFlags: 01,
+			}),
+			expAttributes: []attribute.KeyValue{
+				semconv.HTTPRequestMethodKey.String(http.MethodGet),
+				semconv.HTTPRoute("/api/v1/users"),
+				semconv.URLPath("/api/v1/users"),
+				semconv.URLScheme("https"),
+				semconv.UserAgentOriginal(""),
+				semconv.ServerAddressKey.String("example.com"),
+				semconv.URLQuery("page=1&size=10&sort=desc"),
 				semconv.NetworkPeerAddress("192.0.2.1:1234"),
 				semconv.NetworkProtocolVersion("HTTP/1.1"),
 				semconv.HTTPResponseStatusCode(http.StatusOK),
@@ -75,9 +107,11 @@ func TestStartIncomingRequest(t *testing.T) {
 			}),
 			expAttributes: []attribute.KeyValue{
 				semconv.HTTPRequestMethodKey.String(http.MethodGet),
-				semconv.ServerAddressKey.String("example.com"),
+				semconv.HTTPRoute("/api/v1/users"),
+				semconv.URLPath("/api/v1/users"),
+				semconv.URLScheme("https"),
 				semconv.UserAgentOriginal(""),
-				semconv.URLFull("/api/v1/users"),
+				semconv.ServerAddressKey.String("example.com"),
 				semconv.NetworkPeerAddress("192.0.2.1:1234"),
 				semconv.NetworkProtocolVersion("HTTP/1.1"),
 				semconv.HTTPRequestBodySize(2),
@@ -98,9 +132,11 @@ func TestStartIncomingRequest(t *testing.T) {
 			}),
 			expAttributes: []attribute.KeyValue{
 				semconv.HTTPRequestMethodKey.String(http.MethodGet),
-				semconv.ServerAddressKey.String("example.com"),
+				semconv.HTTPRoute("/api/v1/users"),
+				semconv.URLPath("/api/v1/users"),
+				semconv.URLScheme("https"),
 				semconv.UserAgentOriginal(""),
-				semconv.URLFull("/api/v1/users"),
+				semconv.ServerAddressKey.String("example.com"),
 				semconv.NetworkPeerAddress("192.0.2.1:1234"),
 				semconv.NetworkProtocolVersion("HTTP/1.1"),
 				semconv.HTTPResponseStatusCode(http.StatusBadRequest),
@@ -139,9 +175,11 @@ func TestStartIncomingRequest(t *testing.T) {
 			expSpanKind: trace.SpanKindServer,
 			expAttributes: []attribute.KeyValue{
 				semconv.HTTPRequestMethodKey.String(http.MethodGet),
-				semconv.ServerAddressKey.String("example.com"),
+				semconv.HTTPRoute("/api/v1/users"),
+				semconv.URLPath("/api/v1/users"),
+				semconv.URLScheme("https"),
 				semconv.UserAgentOriginal(""),
-				semconv.URLFull("/api/v1/users"),
+				semconv.ServerAddressKey.String("example.com"),
 				semconv.NetworkPeerAddress("192.0.2.1:1234"),
 				semconv.NetworkProtocolVersion("HTTP/1.1"),
 				semconv.HTTPResponseStatusCode(http.StatusOK),
@@ -165,9 +203,11 @@ func TestStartIncomingRequest(t *testing.T) {
 			}),
 			expAttributes: []attribute.KeyValue{
 				semconv.HTTPRequestMethodKey.String(http.MethodPost),
-				semconv.ServerAddressKey.String("example.com"),
+				semconv.HTTPRoute("/api/v1/users"),
+				semconv.URLPath("/api/v1/users"),
+				semconv.URLScheme("https"),
 				semconv.UserAgentOriginal(""),
-				semconv.URLFull("/api/v1/users"),
+				semconv.ServerAddressKey.String("example.com"),
 				semconv.NetworkPeerAddress("192.0.2.1:1234"),
 				semconv.NetworkProtocolVersion("HTTP/1.1"),
 				semconv.HTTPRequestBodySize(9752),
@@ -192,9 +232,11 @@ func TestStartIncomingRequest(t *testing.T) {
 			}),
 			expAttributes: []attribute.KeyValue{
 				semconv.HTTPRequestMethodKey.String(http.MethodPost),
-				semconv.ServerAddressKey.String("example.com"),
+				semconv.HTTPRoute("/api/v1/users"),
+				semconv.URLPath("/api/v1/users"),
+				semconv.URLScheme("https"),
 				semconv.UserAgentOriginal(""),
-				semconv.URLFull("/api/v1/users"),
+				semconv.ServerAddressKey.String("example.com"),
 				semconv.NetworkPeerAddress("192.0.2.1:1234"),
 				semconv.NetworkProtocolVersion("HTTP/1.1"),
 				semconv.HTTPResponseStatusCode(http.StatusOK),
@@ -218,9 +260,11 @@ func TestStartIncomingRequest(t *testing.T) {
 			}),
 			expAttributes: []attribute.KeyValue{
 				semconv.HTTPRequestMethodKey.String(http.MethodPost),
-				semconv.ServerAddressKey.String("example.com"),
+				semconv.HTTPRoute("/api/v1/users"),
+				semconv.URLPath("/api/v1/users"),
+				semconv.URLScheme("https"),
 				semconv.UserAgentOriginal(""),
-				semconv.URLFull("/api/v1/users"),
+				semconv.ServerAddressKey.String("example.com"),
 				semconv.NetworkPeerAddress("192.0.2.1:1234"),
 				semconv.NetworkProtocolVersion("HTTP/1.1"),
 				semconv.HTTPRequestBodySize(12),
@@ -245,9 +289,11 @@ func TestStartIncomingRequest(t *testing.T) {
 			}),
 			expAttributes: []attribute.KeyValue{
 				semconv.HTTPRequestMethodKey.String(http.MethodPost),
-				semconv.ServerAddressKey.String("example.com"),
+				semconv.HTTPRoute("/api/v1/users"),
+				semconv.URLPath("/api/v1/users"),
+				semconv.URLScheme("https"),
 				semconv.UserAgentOriginal(""),
-				semconv.URLFull("/api/v1/users"),
+				semconv.ServerAddressKey.String("example.com"),
 				semconv.NetworkPeerAddress("192.0.2.1:1234"),
 				semconv.NetworkProtocolVersion("HTTP/1.1"),
 				semconv.HTTPRequestBodySize(10886),
@@ -273,9 +319,11 @@ func TestStartIncomingRequest(t *testing.T) {
 			}),
 			expAttributes: []attribute.KeyValue{
 				semconv.HTTPRequestMethodKey.String(http.MethodPost),
-				semconv.ServerAddressKey.String("example.com"),
+				semconv.HTTPRoute("/api/v1/users"),
+				semconv.URLPath("/api/v1/users"),
+				semconv.URLScheme("https"),
 				semconv.UserAgentOriginal(""),
-				semconv.URLFull("/api/v1/users"),
+				semconv.ServerAddressKey.String("example.com"),
 				semconv.NetworkPeerAddress("192.0.2.1:1234"),
 				semconv.NetworkProtocolVersion("HTTP/1.1"),
 				semconv.HTTPRequestBodySize(33),
@@ -318,9 +366,11 @@ func TestStartIncomingRequest(t *testing.T) {
 			}),
 			expAttributes: []attribute.KeyValue{
 				semconv.HTTPRequestMethodKey.String(http.MethodPost),
-				semconv.ServerAddressKey.String("example.com"),
+				semconv.HTTPRoute("/api/v1/users"),
+				semconv.URLPath("/api/v1/users"),
+				semconv.URLScheme("https"),
 				semconv.UserAgentOriginal(""),
-				semconv.URLFull("/api/v1/users"),
+				semconv.ServerAddressKey.String("example.com"),
 				semconv.NetworkPeerAddress("192.0.2.1:1234"),
 				semconv.NetworkProtocolVersion("HTTP/1.1"),
 				semconv.HTTPRequestBodySize(33),
@@ -340,12 +390,20 @@ func TestStartIncomingRequest(t *testing.T) {
 			for k, v := range tc.givenHeaders {
 				r.Header.Add(k, v)
 			}
+			r.URL.Scheme = "https"
+			if len(tc.givenQuery) > 0 {
+				q := r.URL.Query()
+				for k, v := range tc.givenQuery {
+					q.Add(k, v)
+				}
+				r.URL.RawQuery = q.Encode()
+			}
 
 			m, err := monitoring.New(monitoring.Config{Writer: io.Discard})
 			require.NoError(t, err)
 
 			// When
-			_, reqMeta, end := StartIncomingRequest(m, r)
+			_, reqMeta, end := StartIncomingRequest(m, r, tc.givenURL)
 			end(tc.givenStatus, tc.givenRespErr)
 
 			// Then
@@ -357,7 +415,10 @@ func TestStartIncomingRequest(t *testing.T) {
 			require.Equal(t, tc.expSpanKind, spanStub.SpanKind)
 			testutil.Equal(t, tc.expParentSpanContext, spanStub.Parent)
 			testutil.Equal(t, tc.expSpanContext, spanStub.SpanContext)
-			testutil.Equal(t, tc.expAttributes, spanStub.Attributes, testutil.EquateComparable[[]attribute.KeyValue](attribute.KeyValue{}))
+			testutil.Equal(t, tc.expAttributes, spanStub.Attributes,
+				testutil.EquateComparable[[]attribute.KeyValue](attribute.KeyValue{}),
+				testutil.IgnoreSliceOrder[attribute.KeyValue](),
+			)
 			if len(tc.expSpanEvents) > 0 {
 				require.Equal(t, len(tc.expSpanEvents), len(spanStub.Events))
 				for idx, expEvent := range tc.expSpanEvents {

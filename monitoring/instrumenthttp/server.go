@@ -8,33 +8,42 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/viebiz/lit/monitoring"
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
 	"go.opentelemetry.io/otel/propagation"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
-
-	"github.com/viebiz/lit/monitoring"
 )
 
-func StartIncomingRequest(m *monitoring.Monitor, r *http.Request) (context.Context, RequestMetadata, func(int, error)) {
+func StartIncomingRequest(m *monitoring.Monitor, r *http.Request, route string) (context.Context, RequestMetadata, func(int, error)) {
 	logTags := map[string]string{
 		httpRequestMethodKey:   r.Method,
-		serverAddressKey:       r.Host,
+		httpRouteKey:           route,
+		urlPathKey:             r.URL.Path,
+		urlSchemeKey:           r.URL.Scheme,
 		userAgentKey:           r.UserAgent(),
-		urlKey:                 r.URL.Path,
+		serverAddressKey:       r.Host,
 		networkPeerAddressKey:  r.RemoteAddr,
 		networkProtocolVersion: r.Proto,
 	}
 
 	attrs := []attribute.KeyValue{
 		semconv.HTTPRequestMethodKey.String(r.Method),
-		semconv.ServerAddressKey.String(r.Host),
+		semconv.HTTPRoute(route),
+		semconv.URLPath(r.URL.Path),
+		semconv.URLScheme(r.URL.Scheme),
 		semconv.UserAgentOriginal(r.UserAgent()),
-		semconv.URLFull(r.URL.Path),
+		semconv.ServerAddressKey.String(r.Host),
 		semconv.NetworkPeerAddress(r.RemoteAddr),
 		semconv.NetworkProtocolVersion(r.Proto),
+	}
+
+	// Add query parameters if present
+	if r.URL.RawQuery != "" {
+		attrs = append(attrs, semconv.URLQuery(r.URL.RawQuery))
+		logTags["url.query"] = r.URL.RawQuery
 	}
 
 	ctx := r.Context()
@@ -64,8 +73,8 @@ func StartIncomingRequest(m *monitoring.Monitor, r *http.Request) (context.Conte
 		trace.WithSpanKind(trace.SpanKindServer),
 		trace.WithAttributes(attrs...),
 	)
-	m = monitoring.InjectTracingInfo(m, span.SpanContext())
 
+	m = monitoring.InjectTracingInfo(m, span.SpanContext())
 	m = m.With(logTags)
 	ctx = monitoring.SetInContext(ctx, m)
 
