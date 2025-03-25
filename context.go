@@ -66,6 +66,9 @@ type Context interface {
 	// Should be used in middleware
 	AbortWithError(err error)
 
+	// FullPath returns the full path of the request
+	FullPath() string
+
 	// Next continues to the next handler in the chain
 	Next()
 }

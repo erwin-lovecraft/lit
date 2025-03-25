@@ -16,11 +16,13 @@ const (
 	httpRequestMethodKey   = "http.request.method"
 	serverAddressKey       = "server.address"
 	userAgentKey           = "user_agent"
-	urlKey                 = "url"
+	urlPathKey             = "url.path"
+	urlSchemeKey           = "url.scheme"
 	networkPeerAddressKey  = "network.peer.address"
 	networkProtocolVersion = "network.protocol.version"
 	httpRequestBodySize    = "http.request.body.size"
 	serviceNameKey         = "service.name"
+	httpRouteKey           = "http.route"
 
 	// Constants
 	requestHeaderContentType = "Content-Type"

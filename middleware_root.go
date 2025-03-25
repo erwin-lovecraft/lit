@@ -16,7 +16,7 @@ import (
 func rootMiddleware(rootCtx context.Context) HandlerFunc {
 	return func(c Context) {
 		// Start tracing for the incoming request
-		ctx, reqMeta, endInstrumentation := instrumenthttp.StartIncomingRequest(monitoring.FromContext(rootCtx), c.Request())
+		ctx, reqMeta, endInstrumentation := instrumenthttp.StartIncomingRequest(monitoring.FromContext(rootCtx), c.Request(), c.FullPath())
 		defer func() {
 			// Recover from any panic that may have occurred during request handling
 			if p := recover(); p != nil {

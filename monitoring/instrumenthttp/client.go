@@ -27,7 +27,7 @@ func StartOutgoingGroupSegment(
 		serviceNameKey:       serviceName,
 		serverAddressKey:     extSvcInfo.Hostname + ":" + extSvcInfo.Port,
 		httpRequestMethodKey: reqMethod,
-		urlKey:               reqURL,
+		urlPathKey:           reqURL,
 	}
 
 	ctx, span := tracer.Start(ctx, httpOutgoingSpanName,
@@ -36,7 +36,7 @@ func StartOutgoingGroupSegment(
 			semconv.ServiceName(serviceName),
 			semconv.ServerAddress(extSvcInfo.Hostname+":"+extSvcInfo.Port),
 			semconv.HTTPRequestMethodKey.String(reqMethod),
-			semconv.URLFull(reqURL),
+			semconv.URLPath(reqURL),
 		),
 	)
 	ctx = monitoring.SetInContext(ctx,
@@ -68,7 +68,7 @@ func StartOutgoingSegment(
 			semconv.ServiceName(serviceName),
 			semconv.ServerAddress(extSvcInfo.Hostname+":"+extSvcInfo.Port),
 			semconv.HTTPRequestMethodKey.String(r.Method),
-			semconv.URLFull(r.URL.Path),
+			semconv.URLPath(r.URL.Path),
 		),
 	)
 
