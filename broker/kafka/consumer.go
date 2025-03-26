@@ -51,27 +51,27 @@ func NewConsumerGroup(
 		return nil, pkgerrors.Wrap(err, "creating new consumer")
 	}
 
-	newMonitor := monitor.With(map[string]string{
+	monitor = monitor.With(map[string]string{
 		"kafka.consumer.client_id": consumerCfg.ClientID,
 		"kafka.consumer.group_id":  consumerCfg.groupID,
 		"kafka.consumer.topic":     topic,
 	})
 
 	msgHandler := messageHandler{
-		monitor:               newMonitor,
+		monitor:               monitor,
 		handler:               handler,
 		maxRetriesPerMsg:      consumerCfg.maxRetriesPerMsg,
 		disablePayloadLogging: consumerCfg.disablePayloadLogging,
 		extSvcInfo:            monitoring.NewExternalServiceInfo(brokers[0]),
 	}
 
-	newMonitor.Infof("Kafka Consumer initialized. Hostname: [%s], Port: [%s]",
+	monitor.Infof("Kafka Consumer initialized. Hostname: [%s], Port: [%s]",
 		msgHandler.extSvcInfo.Hostname,
 		msgHandler.extSvcInfo.Port,
 	)
 
 	return &ConsumerGroup{
-		monitor:  newMonitor,
+		monitor:  monitor,
 		client:   client,
 		consumer: cg,
 		topic:    topic,

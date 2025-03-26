@@ -7,6 +7,7 @@ import (
 	"github.com/IBM/sarama"
 	"github.com/viebiz/lit/monitoring"
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/codes"
 	semconv "go.opentelemetry.io/otel/semconv/v1.26.0"
 	"go.opentelemetry.io/otel/trace"
 )
@@ -46,6 +47,7 @@ func StartConsumeTxn(
 
 	return ctx, func(err error) {
 		if err != nil {
+			span.SetStatus(codes.Error, err.Error())
 			span.RecordError(err)
 		}
 		span.End()
