@@ -15,8 +15,7 @@ func Equal[T any](t TestingT, expected, actual T, opts ...Option[T]) {
 
 	cmpOpts := make([]cmp.Option, len(opts))
 	for i, opt := range opts {
-		opt.check(expected)
-		cmpOpts[i] = opt.toCmpOption()
+		cmpOpts[i] = opt()
 	}
 
 	if !cmp.Equal(expected, actual, cmpOpts...) {
