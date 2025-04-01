@@ -69,6 +69,24 @@ type Context interface {
 	// FullPath returns the full path of the request
 	FullPath() string
 
+	// Param gets the URL path parameter value by key
+	Param(key string) string
+
+	// ParamWithDefault behaves like Param but returns the defaultValue if the parameter is missing or empty
+	ParamWithDefault(key string, defaultValue string) string
+
+	// ParamWithCallback behaves like Param but returns the value from the callback if the parameter is missing or empty
+	ParamWithCallback(key string, callback func() string) string
+
+	// Query gets the URL query parameter value by key
+	Query(key string) string
+
+	// QueryWithDefault behaves like Query but returns the defaultValue if the parameter is missing or empty
+	QueryWithDefault(key string, defaultValue string) string
+
+	// QueryWithCallback behaves like Query but returns the value from the callback if the parameter is missing or empty
+	QueryWithCallback(key string, callback func() string) string
+
 	// Next continues to the next handler in the chain
 	Next()
 }
@@ -129,4 +147,36 @@ func (c litContext) AbortWithError(obj error) {
 	if err := json.NewEncoder(c.Writer()).Encode(errBody); err != nil {
 		monitoring.FromContext(c).Errorf(err, "[http_server] Write response failed")
 	}
+}
+
+func (c litContext) ParamWithDefault(key string, defaultValue string) string {
+	value := c.Context.Param(key)
+	if value == "" {
+		return defaultValue
+	}
+	return value
+}
+
+func (c litContext) ParamWithCallback(key string, callback func() string) string {
+	value := c.Context.Param(key)
+	if value == "" {
+		return callback()
+	}
+	return value
+}
+
+func (c litContext) QueryWithDefault(key string, defaultValue string) string {
+	value := c.Context.Query(key)
+	if value == "" {
+		return defaultValue
+	}
+	return value
+}
+
+func (c litContext) QueryWithCallback(key string, callback func() string) string {
+	value := c.Context.Query(key)
+	if value == "" {
+		return callback()
+	}
+	return value
 }
