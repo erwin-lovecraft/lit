@@ -19,7 +19,7 @@ func TestAbortWithError(t *testing.T) {
 		outErr   error
 	}
 
-	tests := map[string]struct {
+	tcs := map[string]struct {
 		inErr          error
 		mockWriter     mockWriter
 		expectedStatus int
@@ -65,7 +65,7 @@ func TestAbortWithError(t *testing.T) {
 		},
 	}
 
-	for name, tc := range tests {
+	for name, tc := range tcs {
 		tc := tc
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
@@ -123,4 +123,268 @@ func (e testErrorMarshal) StatusCode() int {
 
 func (e testErrorMarshal) MarshalJSON() ([]byte, error) {
 	return nil, errors.New("marshal error")
+}
+
+func TestParam(t *testing.T) {
+	tcs := map[string]struct {
+		key            string
+		paramValue     string
+		expectedResult string
+	}{
+		"param exists": {
+			key:            "id",
+			paramValue:     "123",
+			expectedResult: "123",
+		},
+		"param does not exist": {
+			key:            "missing",
+			paramValue:     "",
+			expectedResult: "",
+		},
+	}
+
+	for name, tc := range tcs {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// Given
+			recorder := httptest.NewRecorder()
+			r, c, handleContext := NewRouterForTest(recorder)
+
+			r.Get("/api/v1/test/:id", func(c Context) error { return nil })
+			c.SetRequest(httptest.NewRequest(http.MethodGet, "/api/v1/test/123", nil))
+			handleContext()
+
+			// When
+			result := c.Param(tc.key)
+
+			// Then
+			require.Equal(t, tc.expectedResult, result)
+		})
+	}
+}
+
+func TestParamWithDefault(t *testing.T) {
+	tcs := map[string]struct {
+		key            string
+		defaultValue   string
+		paramValue     string
+		expectedResult string
+	}{
+		"param exists": {
+			key:            "id",
+			defaultValue:   "default",
+			paramValue:     "123",
+			expectedResult: "123",
+		},
+		"param does not exist": {
+			key:            "missing",
+			defaultValue:   "default",
+			paramValue:     "",
+			expectedResult: "default",
+		},
+	}
+
+	for name, tc := range tcs {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// Given
+			recorder := httptest.NewRecorder()
+			r, c, handleContext := NewRouterForTest(recorder)
+
+			r.Get("/api/v1/test/:id", func(c Context) error { return nil })
+			c.SetRequest(httptest.NewRequest(http.MethodGet, "/api/v1/test/123", nil))
+			handleContext()
+
+			// When
+			result := c.ParamWithDefault(tc.key, tc.defaultValue)
+
+			// Then
+			require.Equal(t, tc.expectedResult, result)
+		})
+	}
+}
+
+func TestParamWithCallback(t *testing.T) {
+	tcs := map[string]struct {
+		key            string
+		callback       func() string
+		paramValue     string
+		expectedResult string
+	}{
+		"param exists": {
+			key:            "id",
+			callback:       func() string { return "callback-value" },
+			paramValue:     "123",
+			expectedResult: "123",
+		},
+		"param does not exist": {
+			key:            "missing",
+			callback:       func() string { return "callback-value" },
+			paramValue:     "",
+			expectedResult: "callback-value",
+		},
+	}
+
+	for name, tc := range tcs {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// Given
+			recorder := httptest.NewRecorder()
+			r, c, handleContext := NewRouterForTest(recorder)
+
+			r.Get("/api/v1/test/:id", func(c Context) error { return nil })
+			c.SetRequest(httptest.NewRequest(http.MethodGet, "/api/v1/test/123", nil))
+			handleContext()
+
+			// When
+			result := c.ParamWithCallback(tc.key, tc.callback)
+
+			// Then
+			require.Equal(t, tc.expectedResult, result)
+		})
+	}
+}
+
+func TestQuery(t *testing.T) {
+	tcs := map[string]struct {
+		key            string
+		query          string
+		expectedResult string
+	}{
+		"query exists": {
+			key:            "id",
+			query:          "id=123",
+			expectedResult: "123",
+		},
+		"query does not exist": {
+			key:            "missing",
+			query:          "id=123",
+			expectedResult: "",
+		},
+	}
+
+	for name, tc := range tcs {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// Given
+			recorder := httptest.NewRecorder()
+			r, c, handleContext := NewRouterForTest(recorder)
+
+			r.Get("/api/v1/test/:id", func(c Context) error { return nil })
+			c.SetRequest(httptest.NewRequest(http.MethodGet, "/?"+tc.query, nil))
+			handleContext()
+
+			// When
+			result := c.Query(tc.key)
+
+			// Then
+			require.Equal(t, tc.expectedResult, result)
+		})
+	}
+}
+
+func TestQueryWithDefault(t *testing.T) {
+	tcs := map[string]struct {
+		key            string
+		defaultValue   string
+		query          string
+		expectedResult string
+	}{
+		"query exists": {
+			key:            "id",
+			defaultValue:   "default",
+			query:          "id=123",
+			expectedResult: "123",
+		},
+		"query does not exist": {
+			key:            "missing",
+			defaultValue:   "default",
+			query:          "id=123",
+			expectedResult: "default",
+		},
+		"query exists but empty": {
+			key:            "empty",
+			defaultValue:   "default",
+			query:          "id=123&empty=",
+			expectedResult: "default",
+		},
+	}
+
+	for name, tc := range tcs {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// Given
+			recorder := httptest.NewRecorder()
+			r, c, handleContext := NewRouterForTest(recorder)
+
+			r.Get("/api/v1/test/:id", func(c Context) error { return nil })
+			c.SetRequest(httptest.NewRequest(http.MethodGet, "/?"+tc.query, nil))
+			handleContext()
+
+			// When
+			result := c.QueryWithDefault(tc.key, tc.defaultValue)
+
+			// Then
+			require.Equal(t, tc.expectedResult, result)
+		})
+	}
+}
+
+func TestQueryWithCallback(t *testing.T) {
+	tcs := map[string]struct {
+		key            string
+		callback       func() string
+		query          string
+		expectedResult string
+	}{
+		"query exists": {
+			key:            "id",
+			callback:       func() string { return "callback-value" },
+			query:          "id=123",
+			expectedResult: "123",
+		},
+		"query does not exist": {
+			key:            "missing",
+			callback:       func() string { return "callback-value" },
+			query:          "id=123",
+			expectedResult: "callback-value",
+		},
+		"query exists but empty": {
+			key:            "empty",
+			callback:       func() string { return "callback-value" },
+			query:          "id=123&empty=",
+			expectedResult: "callback-value",
+		},
+	}
+
+	for name, tc := range tcs {
+		tc := tc
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+
+			// Given
+			recorder := httptest.NewRecorder()
+			r, c, handleContext := NewRouterForTest(recorder)
+
+			r.Get("/api/v1/test/:id", func(c Context) error { return nil })
+			c.SetRequest(httptest.NewRequest(http.MethodGet, "/?"+tc.query, nil))
+			handleContext()
+
+			// When
+			result := c.QueryWithCallback(tc.key, tc.callback)
+
+			// Then
+			require.Equal(t, tc.expectedResult, result)
+		})
+	}
 }
