@@ -12,16 +12,17 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-
+	"github.com/viebiz/lit/ioutil"
 	"github.com/viebiz/lit/jwt"
 )
 
 func TestRFC9068Validator_Validate(t *testing.T) {
+	ioutil.SetResourceDir("testdata")
 	const (
 		issuer          string = "https://mukagen.com"
 		audience        string = "https://limitless.mukagen.com"
-		privateKeyPath  string = "testdata/sample_rsa_private_key"
-		certificatePath string = "testdata/sample_rsa_certificate"
+		privateKeyPath  string = "sample_rsa_private_key"
+		certificatePath string = "sample_rsa_certificate"
 	)
 	staticTimeNow := time.Date(2024, time.July, 24, 0, 0, 0, 0, time.UTC)
 

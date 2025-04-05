@@ -7,10 +7,12 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"github.com/viebiz/lit/ioutil"
 )
 
 func TestSigningMethodRSA_Sign(t *testing.T) {
-	privateKeyPath := "testdata/sample_rsa_private_key"
+	ioutil.SetResourceDir("testdata")
+	privateKeyPath := "sample_rsa_private_key"
 	key := readKeyForTest[*rsa.PrivateKey](t, privateKeyPath)
 
 	getSigningMethodFunc := func(alg string) RSA {
@@ -81,7 +83,8 @@ func TestSigningMethodRSA_Sign(t *testing.T) {
 }
 
 func TestSigningMethodRSA_Verify(t *testing.T) {
-	privateKeyPath := "testdata/sample_rsa_private_key"
+	ioutil.SetResourceDir("testdata")
+	privateKeyPath := "sample_rsa_private_key"
 	key := readKeyForTest[*rsa.PrivateKey](t, privateKeyPath)
 
 	getSigningMethodFunc := func(alg string) RSA {
