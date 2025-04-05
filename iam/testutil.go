@@ -7,15 +7,15 @@ import (
 	"encoding/pem"
 	"math/big"
 	"net/http"
-	"os"
 	"strings"
 
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"github.com/viebiz/lit/ioutil"
 )
 
 func readRSAPrivateKey(t require.TestingT, path string) *rsa.PrivateKey {
-	b, err := os.ReadFile(path)
+	b, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
 
 	block, _ := pem.Decode(b)
@@ -31,7 +31,7 @@ func readRSAPrivateKey(t require.TestingT, path string) *rsa.PrivateKey {
 }
 
 func readCertificate(t require.TestingT, path string) *x509.Certificate {
-	b, err := os.ReadFile(path)
+	b, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
 
 	block, _ := pem.Decode(b)

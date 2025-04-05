@@ -7,10 +7,12 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
+	"github.com/viebiz/lit/ioutil"
 )
 
 func TestToken_SignedString(t *testing.T) {
-	privateKeyPath := "testdata/sample_rsa_private_key"
+	ioutil.SetResourceDir("testdata")
+	privateKeyPath := "sample_rsa_private_key"
 	key := readKeyForTest[*rsa.PrivateKey](t, privateKeyPath)
 	iat := time.Date(2024, time.July, 24, 0, 0, 0, 0, time.UTC).Unix()
 	exp := time.Date(2024, time.July, 24, 1, 0, 0, 0, time.UTC).Unix()

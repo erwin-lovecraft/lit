@@ -5,9 +5,9 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"os"
 
 	"github.com/stretchr/testify/require"
+	"github.com/viebiz/lit/ioutil"
 )
 
 func parsePrivateKeyFromPEM[T crypto.PrivateKey](b []byte) (T, error) {
@@ -30,7 +30,7 @@ func parsePrivateKeyFromPEM[T crypto.PrivateKey](b []byte) (T, error) {
 }
 
 func readKeyForTest[T crypto.Signer](t require.TestingT, path string) T {
-	b, err := os.ReadFile(path)
+	b, err := ioutil.ReadFile(path)
 	require.NoError(t, err)
 
 	key, err := parsePrivateKeyFromPEM[T](b)

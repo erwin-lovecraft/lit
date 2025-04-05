@@ -9,13 +9,15 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"github.com/google/go-cmp/cmp/cmpopts"
+	"github.com/viebiz/lit/ioutil"
 
 	"github.com/stretchr/testify/require"
 )
 
 func TestParser_Parse(t *testing.T) {
+	ioutil.SetResourceDir("testdata")
 	keyFunc := func(string) (crypto.PublicKey, error) {
-		privateKeyPath := "testdata/sample_rsa_private_key"
+		privateKeyPath := "sample_rsa_private_key"
 		key := readKeyForTest[*rsa.PrivateKey](t, privateKeyPath)
 
 		return key.Public(), nil
@@ -110,8 +112,9 @@ func TestParser_Parse(t *testing.T) {
 }
 
 func BenchmarkParser_Parse(b *testing.B) {
+	ioutil.SetResourceDir("testdata")
 	keyFunc := func(string) (crypto.PublicKey, error) {
-		privateKeyPath := "testdata/sample_rsa_private_key"
+		privateKeyPath := "sample_rsa_private_key"
 		key := readKeyForTest[*rsa.PrivateKey](b, privateKeyPath)
 
 		return key.Public(), nil
