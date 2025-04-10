@@ -17,11 +17,6 @@ func (c litContext) Bind(obj interface{}) error {
 		return convertValidationErr(c, err)
 	}
 
-	// Default binding does not include URI parameters.
-	if err := c.Context.ShouldBindUri(obj); err != nil {
-		return err
-	}
-
 	return nil
 }
 
