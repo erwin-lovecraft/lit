@@ -17,7 +17,7 @@ const (
 )
 
 // InjectField injects a field to Logger and trace.Span in context
-func InjectField[T any](ctx context.Context, key string, value T) context.Context {
+func InjectField[T comparable](ctx context.Context, key string, value T) context.Context {
 	valStr := fmt.Sprintf("%v", value) // TODO: Optimize it
 	trace.SpanFromContext(ctx).SetAttributes(attribute.String(key, valStr))
 	return SetInContext(ctx, FromContext(ctx).WithTag(key, valStr))
