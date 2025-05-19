@@ -26,9 +26,9 @@ type Server struct {
 }
 
 // NewHttpServer creates new http server
-func NewHttpServer(addr string, hdl http.Handler, opts ...ServerOption) Server {
+func NewHttpServer(addr string, hdl http.Handler, opts ...ServerOption) *Server {
 	// Setup server
-	srv := Server{
+	srv := &Server{
 		httpServer: &http.Server{
 			Addr:         addr,
 			Handler:      hdl,
@@ -41,7 +41,7 @@ func NewHttpServer(addr string, hdl http.Handler, opts ...ServerOption) Server {
 
 	// Configures server
 	for _, opt := range opts {
-		opt(&srv)
+		opt(srv)
 	}
 
 	return srv

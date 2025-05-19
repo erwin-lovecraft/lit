@@ -1,4 +1,4 @@
-package lit
+package cors
 
 import (
 	"net/http"
@@ -7,12 +7,12 @@ import (
 	"github.com/gin-contrib/cors"
 )
 
-// CORSConfig holds the CORS configuration
-type CORSConfig struct {
-	cfg cors.Config
+// Config holds the CORS configuration
+type Config struct {
+	underlying cors.Config
 }
 
-// NewCORSConfig initializes and returns a CORSConfig with predefined defaults.
+// New initializes and returns a Config with predefined defaults.
 //
 // Default configurations:
 //   - Allowed methods: GET, POST, PUT, PATCH, DELETE, HEAD, OPTIONS
@@ -21,9 +21,9 @@ type CORSConfig struct {
 //   - OpenTelemetry: "traceparent", "tracestate", "baggage"
 //   - Allow credentials: true (supports cookies and authorization headers)
 //   - Max age: 300 seconds (caches preflight response for 5 minutes)
-func NewCORSConfig(origins []string) CORSConfig {
-	return CORSConfig{
-		cfg: cors.Config{
+func New(origins []string) Config {
+	return Config{
+		underlying: cors.Config{
 			AllowOrigins: origins,
 			AllowMethods: []string{
 				http.MethodGet,
@@ -45,22 +45,22 @@ func NewCORSConfig(origins []string) CORSConfig {
 	}
 }
 
-func (corsCfg *CORSConfig) SetAllowMethods(methods ...string) {
-	corsCfg.cfg.AllowMethods = methods
+func (corsCfg *Config) SetAllowMethods(methods ...string) {
+	corsCfg.underlying.AllowMethods = methods
 }
 
-func (corsCfg *CORSConfig) SetAllowHeaders(headers ...string) {
-	corsCfg.cfg.AllowHeaders = headers
+func (corsCfg *Config) SetAllowHeaders(headers ...string) {
+	corsCfg.underlying.AllowHeaders = headers
 }
 
-func (corsCfg *CORSConfig) SetExposeHeaders(headers ...string) {
-	corsCfg.cfg.ExposeHeaders = headers
+func (corsCfg *Config) SetExposeHeaders(headers ...string) {
+	corsCfg.underlying.ExposeHeaders = headers
 }
 
-func (corsCfg *CORSConfig) DisableCredentials() {
-	corsCfg.cfg.AllowCredentials = false
+func (corsCfg *Config) DisableCredentials() {
+	corsCfg.underlying.AllowCredentials = false
 }
 
-func (corsCfg *CORSConfig) SetMaxAge(maxAge time.Duration) {
-	corsCfg.cfg.MaxAge = maxAge
+func (corsCfg *Config) SetMaxAge(maxAge time.Duration) {
+	corsCfg.underlying.MaxAge = maxAge
 }

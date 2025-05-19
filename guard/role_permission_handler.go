@@ -5,10 +5,9 @@ import (
 
 	"github.com/viebiz/lit"
 	"github.com/viebiz/lit/iam"
-	"github.com/viebiz/lit/monitoring"
 )
 
-func (guard AuthGuard) RolePermissionHandler(handler lit.ErrHandlerFunc, resource string, permissions Action) lit.ErrHandlerFunc {
+func (guard AuthGuard) RolePermissionHandler(handler lit.HandlerFunc, resource string, permissions Action) lit.HandlerFunc {
 	return func(c lit.Context) error {
 		req := c.Request()
 		ctx := req.Context()
@@ -16,7 +15,6 @@ func (guard AuthGuard) RolePermissionHandler(handler lit.ErrHandlerFunc, resourc
 		// 1. Get user profile from request context
 		profile := iam.GetUserProfileFromContext(ctx)
 		if profile.ID() == "" {
-			monitoring.FromContext(ctx).Errorf(errUserProfileNotInCtx, "Missing user profile in context")
 			return errForbidden
 		}
 
@@ -33,7 +31,7 @@ func (guard AuthGuard) RolePermissionHandler(handler lit.ErrHandlerFunc, resourc
 				return errForbidden
 			}
 
-			return lit.ErrDefaultInternal
+			return err
 		}
 
 		return handler(c)

@@ -1,9 +1,7 @@
 package guard
 
 import (
-	"bytes"
-	"encoding/json"
-	"errors"
+	"context"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -41,30 +39,21 @@ func TestRequiredM2MScopeMiddleware(t *testing.T) {
 			t.Parallel()
 
 			// Given
-			rr := httptest.NewRecorder()
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
-			req = req.WithContext(iam.SetM2MProfileInContext(req.Context(), tc.m2mProfile))
+			_, ctx, _ := lit.NewRouterForTest(httptest.NewRecorder())
 
-			_, ctx, _ := lit.NewRouterForTest(rr)
+			reqCtx := context.Background()
+			req := httptest.NewRequestWithContext(reqCtx, http.MethodGet, "/", nil)
+			req = req.WithContext(iam.SetM2MProfileInContext(req.Context(), tc.m2mProfile))
 			ctx.SetRequest(req)
 
 			// When
 			guard := New(nil, nil)
 			hdl := guard.RequiredM2MScopeMiddleware(tc.in...)
-			hdl(ctx)
+			err := hdl(ctx)
 
 			// Then
 			if tc.expErr != nil {
-				var iamErr lit.HttpError
-				if errors.As(tc.expErr, &iamErr) {
-					require.Equal(t, rr.Code, iamErr.Status)
-				} else {
-					require.Equal(t, rr.Code, http.StatusInternalServerError)
-				}
-
-				expResult := bytes.NewBuffer(nil)
-				require.NoError(t, json.NewEncoder(expResult).Encode(tc.expErr))
-				require.Equal(t, expResult.Bytes(), rr.Body.Bytes())
+				require.EqualError(t, err, tc.expErr.Error())
 			}
 		})
 	}

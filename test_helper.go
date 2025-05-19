@@ -8,30 +8,30 @@ import (
 
 func NewRouterForTest(w http.ResponseWriter) (Router, Context, func()) {
 	gin.SetMode(gin.TestMode)
-	route := gin.New()
-	route.ContextWithFallback = true
-	rtr := router{
-		ginRouter: route,
+	engine := gin.New()
+	engine.ContextWithFallback = true
+	rtr := &router{
+		engine: engine,
+		route: route{
+			routes: &engine.RouterGroup,
+		},
 	}
 
-	ginCtx := gin.CreateTestContextOnly(w, route)
+	ginCtx := gin.CreateTestContextOnly(w, engine)
 	ctx := litContext{
 		Context: ginCtx,
 	}
 
 	return rtr, ctx, func() {
-		route.HandleContext(ginCtx)
+		engine.HandleContext(ginCtx)
 	}
 }
 
 func CreateTestContext(w http.ResponseWriter) Context {
 	gin.SetMode(gin.TestMode)
-	route := gin.New()
-	route.ContextWithFallback = true
-	ginCtx := gin.CreateTestContextOnly(w, route)
-	ctx := litContext{
-		Context: ginCtx,
-	}
+	engine := gin.New()
+	engine.ContextWithFallback = true
+	ginCtx := gin.CreateTestContextOnly(w, engine)
 
-	return ctx
+	return newContext(ginCtx)
 }

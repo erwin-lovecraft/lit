@@ -17,26 +17,23 @@ const (
 )
 
 func (guard AuthGuard) AuthenticateUserMiddleware() lit.HandlerFunc {
-	return func(c lit.Context) {
+	return func(c lit.Context) error {
 		// 1. Get access token from request header
 		tokenStr := getTokenString(c.Request())
 		if tokenStr == "" {
-			c.AbortWithError(errMissingAccessToken)
-			return
+			return errMissingAccessToken
 		}
 
 		// 2. Validate access token
 		tk, err := guard.validator.Validate(getTokenString(c.Request()))
 		if err != nil {
-			responseErr(c, err)
-			return
+			return convertError(err)
 		}
 
 		// 3. Extract user profile from token claims
 		profile, err := iam.ExtractUserProfileFromClaims(tk.Claims)
 		if err != nil {
-			responseErr(c, err)
-			return
+			return convertError(err)
 		}
 
 		// 4. Inject user information to request context
@@ -50,6 +47,8 @@ func (guard AuthGuard) AuthenticateUserMiddleware() lit.HandlerFunc {
 
 		// 5. Continue handle request
 		c.Next()
+		
+		return nil
 	}
 }
 
@@ -62,18 +61,15 @@ func getTokenString(r *http.Request) string {
 	return authHeaderParts[1]
 }
 
-func responseErr(c lit.Context, err error) {
+func convertError(err error) error {
 	switch err.Error() {
 	case iam.ErrMissingRequiredClaim.Error(),
 		iam.ErrTokenExpired.Error(),
 		iam.ErrInvalidToken.Error():
-		c.AbortWithError(unauthorizedErr(err))
-
+		return unauthorizedErr(err)
 	case iam.ErrActionIsNotAllowed.Error():
-		c.AbortWithError(errForbidden)
-
+		return errForbidden
 	default:
-		c.AbortWithError(lit.ErrDefaultInternal)
-		monitoring.FromContext(c.Request().Context()).Errorf(err, "Got unexpected error")
+		return err
 	}
 }

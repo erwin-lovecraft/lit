@@ -10,6 +10,8 @@ import (
 	"github.com/viebiz/lit/grpcclient/testdata"
 	"github.com/viebiz/lit/testutil"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 )
 
 func Test_unaryServerInterceptor(t *testing.T) {
@@ -84,7 +86,7 @@ func Test_unaryServerInterceptor(t *testing.T) {
 				willPanic: true,
 				in:        &testdata.WeatherRequest{},
 			},
-			expErr: ErrDefaultInternal,
+			expErr: status.Error(codes.Internal, "internal error"),
 			expLogs: []map[string]interface{}{
 				{
 					"error":    "simulated panic",

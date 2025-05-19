@@ -19,7 +19,7 @@ type Config struct {
 	Writer          io.Writer // Support write log to buffer for testing
 	SentryDSN       string    // To capture error, skip init Sentry if it's not provided
 	OtelExporterURL string    // To support OpenTelemetry
-	ExtraTags       map[string]string
+	Tags            map[string]string
 }
 
 // New creates a new Monitor instance
@@ -30,18 +30,16 @@ func New(cfg Config) (*Monitor, error) {
 		w = cfg.Writer
 	}
 
+	if cfg.Tags == nil {
+		cfg.Tags = make(map[string]string)
+	}
+	cfg.Tags["server.name"] = cfg.ServerName
+	cfg.Tags["environment"] = cfg.Environment
+	cfg.Tags["version"] = cfg.Version
 	m := &Monitor{
 		logger:  zap.New(newZapCore(w)),
-		logTags: map[string]string{},
+		logTags: cfg.Tags,
 	}
-
-	if cfg.ExtraTags == nil {
-		cfg.ExtraTags = make(map[string]string)
-	}
-	cfg.ExtraTags["server.name"] = cfg.ServerName
-	cfg.ExtraTags["environment"] = cfg.Environment
-	cfg.ExtraTags["version"] = cfg.Version
-	m = m.With(cfg.ExtraTags)
 
 	// Setup sentry
 	sentryClient, err := initSentry(sentryConfig{
@@ -49,7 +47,7 @@ func New(cfg Config) (*Monitor, error) {
 		ServerName:  cfg.ServerName,
 		Environment: cfg.Environment,
 		Version:     cfg.Version,
-	}, m.logger)
+	}, m)
 	if err != nil {
 		return nil, err
 	}
@@ -67,7 +65,7 @@ func New(cfg Config) (*Monitor, error) {
 			return nil, err
 		}
 
-		m.logger.Info("OTelExporter URL not provided. Not using Distributed Tracing")
+		m.Infof("OTelExporter URL not provided. Not using Distributed Tracing")
 	}
 
 	return m, nil
