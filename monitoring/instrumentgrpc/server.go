@@ -69,9 +69,7 @@ func StartUnaryIncomingCall(ctx context.Context, m *monitoring.Monitor, fullMeth
 		trace.WithSpanKind(trace.SpanKindServer),
 		trace.WithAttributes(attrs...),
 	)
-	m = monitoring.InjectTracingInfo(m, span.SpanContext())
-
-	m = m.With(logTags)
+	m = monitoring.InjectTracingInfo(m, span.SpanContext(), logTags)
 	ctx = monitoring.SetInContext(ctx, m)
 
 	return ctx,

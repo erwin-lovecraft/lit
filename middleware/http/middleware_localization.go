@@ -38,7 +38,7 @@ func LocalizationMiddleware(ctx context.Context, cfg Config) lit.HandlerFunc {
 		BundleFileFormat: cfg.Format,
 	})
 
-	return func(c lit.Context) {
+	return func(c lit.Context) error {
 		req := c.Request()
 		reqCtx := req.Context()
 
@@ -57,6 +57,8 @@ func LocalizationMiddleware(ctx context.Context, cfg Config) lit.HandlerFunc {
 
 		// Continue handle request
 		c.Next()
+
+		return nil
 	}
 }
 

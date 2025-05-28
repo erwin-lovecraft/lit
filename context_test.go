@@ -12,7 +12,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestAbortWithError(t *testing.T) {
+func TestError(t *testing.T) {
 	type mockWriter struct {
 		useMock  bool
 		inStatus int
@@ -30,7 +30,11 @@ func TestAbortWithError(t *testing.T) {
 			expectedStatus: http.StatusInternalServerError,
 			expectedBody: func() string {
 				buf := bytes.NewBuffer(nil)
-				require.NoError(t, json.NewEncoder(buf).Encode(ErrDefaultInternal))
+				require.NoError(t, json.NewEncoder(buf).Encode(&HTTPError{
+					Status: http.StatusInternalServerError,
+					Code:   http.StatusText(http.StatusInternalServerError),
+					Desc:   "Internal Server Error",
+				}))
 				return buf.String()
 			}(),
 		},
@@ -73,6 +77,9 @@ func TestAbortWithError(t *testing.T) {
 			// Given
 			recorder := httptest.NewRecorder()
 			c := CreateTestContext(recorder)
+			c.SetRequest(
+				httptest.NewRequest(http.MethodGet, "/", nil),
+			)
 
 			if tc.mockWriter.useMock {
 				mockResponseWriter := NewMockResponseWriter(t)
@@ -88,7 +95,7 @@ func TestAbortWithError(t *testing.T) {
 			}
 
 			// When
-			c.AbortWithError(tc.inErr)
+			c.Error(tc.inErr)
 
 			// Then
 			require.Equal(t, tc.expectedStatus, recorder.Code)

@@ -38,7 +38,7 @@ func Test_initSentry(t *testing.T) {
 			// Given
 
 			// When
-			c, err := initSentry(tc.givenCfg, zap.NewNop())
+			c, err := initSentry(tc.givenCfg, &Monitor{logger: zap.NewNop()})
 
 			// Then
 			if tc.expErr != nil {

@@ -1,8 +1,7 @@
 package guard
 
 import (
-	"bytes"
-	"encoding/json"
+	"context"
 	"errors"
 	"fmt"
 	"net/http"
@@ -11,7 +10,6 @@ import (
 	"time"
 
 	"github.com/stretchr/testify/require"
-
 	"github.com/viebiz/lit"
 	"github.com/viebiz/lit/iam"
 	"github.com/viebiz/lit/jwt"
@@ -109,14 +107,14 @@ func TestAuthenticateM2MMiddleware(t *testing.T) {
 			},
 			expErr: unauthorizedErr(iam.ErrInvalidToken),
 		},
-		"error - internal server error": {
+		"error - unexpected error": {
 			givenToken: "invalid-token",
 			mockData: mockData{
 				expCall:  true,
 				inputStr: "invalid-token",
 				outErr:   errors.New("simulate server error"),
 			},
-			expErr: lit.ErrDefaultInternal,
+			expErr: errors.New("simulate server error"),
 		},
 	}
 
@@ -126,12 +124,11 @@ func TestAuthenticateM2MMiddleware(t *testing.T) {
 			t.Parallel()
 
 			// Given
-			request := httptest.NewRequest(http.MethodGet, "/", nil)
+			reqCtx := context.Background()
+			request := httptest.NewRequestWithContext(reqCtx, http.MethodGet, "/", nil)
 			request.Header.Set(headerAuthorization, fmt.Sprintf("Bearer %s", tc.givenToken))
 
-			respRecord := httptest.NewRecorder()
-
-			_, ctx, _ := lit.NewRouterForTest(respRecord)
+			_, ctx, _ := lit.NewRouterForTest(httptest.NewRecorder())
 			ctx.SetRequest(request)
 
 			mockInstance := new(iam.MockValidator)
@@ -144,22 +141,15 @@ func TestAuthenticateM2MMiddleware(t *testing.T) {
 
 			// When
 			hdl := guard.AuthenticateM2MMiddleware()
-			hdl(ctx)
+			err := hdl(ctx)
+
 			actualProfile := iam.GetM2MProfileFromContext(ctx.Request().Context())
 
 			// Then
 			if tc.expErr != nil {
-				var iamErr lit.HttpError
-				if errors.As(tc.expErr, &iamErr) {
-					require.Equal(t, respRecord.Code, iamErr.Status)
-				} else {
-					require.Equal(t, respRecord.Code, http.StatusInternalServerError)
-				}
-
-				expResult := bytes.NewBuffer(nil)
-				require.NoError(t, json.NewEncoder(expResult).Encode(tc.expErr))
-				require.Equal(t, expResult.Bytes(), respRecord.Body.Bytes())
+				require.EqualError(t, err, tc.expErr.Error())
 			} else {
+				require.NoError(t, err)
 				require.Equal(t, tc.expResult, actualProfile)
 			}
 			mockInstance.AssertExpectations(t)

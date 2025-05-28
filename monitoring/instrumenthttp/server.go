@@ -19,14 +19,8 @@ import (
 
 func StartIncomingRequest(m *monitoring.Monitor, r *http.Request, route string) (context.Context, RequestMetadata, func(int, error)) {
 	logTags := map[string]string{
-		httpRequestMethodKey:   r.Method,
-		httpRouteKey:           route,
-		urlPathKey:             r.URL.Path,
-		urlSchemeKey:           r.URL.Scheme,
-		userAgentKey:           r.UserAgent(),
-		serverAddressKey:       r.Host,
-		networkPeerAddressKey:  r.RemoteAddr,
-		networkProtocolVersion: r.Proto,
+		httpRequestMethodKey: r.Method,
+		httpRouteKey:         route,
 	}
 
 	attrs := []attribute.KeyValue{
@@ -43,7 +37,7 @@ func StartIncomingRequest(m *monitoring.Monitor, r *http.Request, route string) 
 	// Add query parameters if present
 	if r.URL.RawQuery != "" {
 		attrs = append(attrs, semconv.URLQuery(r.URL.RawQuery))
-		logTags["url.query"] = r.URL.RawQuery
+		logTags[urlQueryKey] = r.URL.RawQuery
 	}
 
 	ctx := r.Context()
@@ -74,8 +68,7 @@ func StartIncomingRequest(m *monitoring.Monitor, r *http.Request, route string) 
 		trace.WithAttributes(attrs...),
 	)
 
-	m = monitoring.InjectTracingInfo(m, span.SpanContext())
-	m = m.With(logTags)
+	m = monitoring.InjectTracingInfo(m, span.SpanContext(), logTags)
 	ctx = monitoring.SetInContext(ctx, m)
 
 	return ctx, reqMeta,

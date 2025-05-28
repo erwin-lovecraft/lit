@@ -33,11 +33,14 @@ func InjectFields(ctx context.Context, tags map[string]string) context.Context {
 	return SetInContext(ctx, FromContext(ctx).With(tags))
 }
 
-func InjectTracingInfo(m *Monitor, spanCtx trace.SpanContext) *Monitor {
-	return m.With(map[string]string{
-		traceIDKey: spanCtx.TraceID().String(),
-		spanIDKey:  spanCtx.SpanID().String(),
-	})
+func InjectTracingInfo(m *Monitor, spanCtx trace.SpanContext, tags map[string]string) *Monitor {
+	if tags == nil {
+		tags = make(map[string]string)
+	}
+	tags[traceIDKey] = spanCtx.TraceID().String()
+	tags[spanIDKey] = spanCtx.SpanID().String()
+
+	return m.With(tags)
 }
 
 func InjectOutgoingTracingInfo(m *Monitor, spanCtx trace.SpanContext) *Monitor {
@@ -79,7 +82,7 @@ func StartSegmentWithTags(ctx context.Context, name string, extraTags map[string
 
 	// Start Span
 	ctx, span := tracer.Start(ctx, name, opts...)
-	ctx = SetInContext(ctx, InjectTracingInfo(FromContext(ctx), span.SpanContext()))
+	ctx = SetInContext(ctx, InjectTracingInfo(FromContext(ctx), span.SpanContext(), extraTags))
 
 	return ctx, func() {
 		span.End()

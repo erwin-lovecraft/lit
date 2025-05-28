@@ -14,9 +14,10 @@ import (
 // rootMiddleware is a middleware function that handles tracing for incoming requests
 // and recovers from any panics that may occur during request handling
 func rootMiddleware(rootCtx context.Context) HandlerFunc {
-	return func(c Context) {
+	return func(c Context) error {
 		// Start tracing for the incoming request
 		ctx, reqMeta, endInstrumentation := instrumenthttp.StartIncomingRequest(monitoring.FromContext(rootCtx), c.Request(), c.FullPath())
+		// Recovery logic when got panic
 		defer func() {
 			// Recover from any panic that may have occurred during request handling
 			if p := recover(); p != nil {
@@ -31,16 +32,16 @@ func rootMiddleware(rootCtx context.Context) HandlerFunc {
 				monitoring.FromContext(c.Request().Context()).Errorf(err, "Caught a panic: %s", debug.Stack())
 
 				// Abort the request with a 500 Internal Server Error response.
-				c.AbortWithError(ErrDefaultInternal)
+				c.Error(err)
+				c.Abort() // Stop further middleware execution
+
 				// End the instrumentation, marking the request with a 500 status code and the error.
 				endInstrumentation(http.StatusInternalServerError, err)
 			}
 		}()
 
-		// Set instrument context to request context
+		// Update context, set instrument context and update response writer
 		c.SetRequestContext(ctx)
-
-		// Wrap response writer to inject trace information
 		c.SetWriter(wrapWriter(ctx, c.Writer()))
 
 		// Continue handle request
@@ -48,8 +49,9 @@ func rootMiddleware(rootCtx context.Context) HandlerFunc {
 
 		// End instrumentation and log
 		endInstrumentation(c.Writer().Status(), nil)
-
 		logIncomingRequest(c, reqMeta, "http.incoming_request")
+
+		return nil
 	}
 }
 

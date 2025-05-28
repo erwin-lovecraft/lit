@@ -6,6 +6,8 @@ import (
 	"runtime/debug"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 
@@ -27,7 +29,7 @@ func unaryServerInterceptor(rootCtx context.Context) grpc.UnaryServerInterceptor
 				monitoring.FromContext(ctx).Errorf(rcvErr, "Caught a panic: %s", debug.Stack())
 				endInstrumentation(rcvErr)
 
-				err = ErrDefaultInternal
+				err = status.Errorf(codes.Internal, "internal error")
 			}
 		}()
 

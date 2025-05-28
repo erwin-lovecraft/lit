@@ -11,6 +11,11 @@ import (
 	"github.com/viebiz/lit/monitoring"
 )
 
+const (
+	plainContentType = "text/plain; charset=utf-8"
+	jsonContentType  = "application/json"
+)
+
 type Context interface {
 	context.Context
 
@@ -46,7 +51,7 @@ type Context interface {
 	Set(key string, value any)
 
 	// Get returns the value for the given key
-	// Eead more at https://pkg.go.dev/github.com/gin-gonic/gin#Context.Get
+	// Read more at https://pkg.go.dev/github.com/gin-gonic/gin#Context.Get
 	Get(key string) (value any, exists bool)
 
 	// Status sets the HTTP response code
@@ -56,15 +61,14 @@ type Context interface {
 	// If value is empty, it will remove the key in the header
 	Header(key string, value string)
 
+	// String sends a string response with status code.
+	String(code int, str string) error
+
 	// JSON serializes the given struct as JSON into the response body
-	JSON(code int, obj any)
+	JSON(code int, obj any) error
 
-	// ProtoBuf serializes the given protocol buffer object and writes it to the response
-	ProtoBuf(code int, obj any)
-
-	// AbortWithError will abort the remaining handlers and return an error to the client
-	// Should be used in middleware
-	AbortWithError(err error)
+	// NoContent sends a no content response with status code
+	NoContent(status int) error
 
 	// FullPath returns the full path of the request
 	FullPath() string
@@ -89,10 +93,23 @@ type Context interface {
 
 	// Next continues to the next handler in the chain
 	Next()
+
+	// Error handles request error
+	// Should be called in middleware to render error response
+	Error(err error)
+
+	// Abort prevents pending handlers from being called
+	Abort()
 }
 
 type litContext struct {
 	*gin.Context
+}
+
+func newContext(c *gin.Context) Context {
+	return &litContext{
+		Context: c,
+	}
 }
 
 func (c litContext) Value(key any) any {
@@ -118,35 +135,6 @@ func (c litContext) SetRequestContext(ctx context.Context) *http.Request {
 
 func (c litContext) SetWriter(w ResponseWriter) {
 	c.Context.Writer = w
-}
-
-func (c litContext) AbortWithError(obj error) {
-	// Set JSON header
-	c.Header("Content-Type", "application/json")
-
-	var (
-		status        = http.StatusInternalServerError
-		errBody error = ErrDefaultInternal
-	)
-
-	// Determine the error type and choose a response payload
-	var litErr Error
-	if errors.As(obj, &litErr) {
-		sc := litErr.StatusCode()
-		if sc < http.StatusInternalServerError || sc == http.StatusServiceUnavailable {
-			status, errBody = sc, litErr
-		}
-	}
-
-	// Abort middleware chain and write header immediately
-	c.AbortWithStatus(status)
-
-	// Write response body
-	// Always return a new line at the end of the response body
-	//https://stackoverflow.com/questions/36319918/why-does-json-encoder-add-an-extra-line
-	if err := json.NewEncoder(c.Writer()).Encode(errBody); err != nil {
-		monitoring.FromContext(c).Errorf(err, "[http_server] Write response failed")
-	}
 }
 
 func (c litContext) ParamWithDefault(key string, defaultValue string) string {
@@ -179,4 +167,56 @@ func (c litContext) QueryWithCallback(key string, callback func() string) string
 		return callback()
 	}
 	return value
+}
+
+func (c litContext) String(status int, s string) error {
+	c.Writer().Header().Set("Content-Type", plainContentType)
+	c.Writer().WriteHeader(status)
+	c.Writer().WriteHeaderNow()
+
+	if _, err := c.Writer().Write([]byte(s)); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (c litContext) JSON(status int, obj any) error {
+	c.Writer().Header().Set("Content-Type", jsonContentType)
+	c.Writer().WriteHeader(status)
+	c.Writer().WriteHeaderNow()
+
+	return json.NewEncoder(c.Writer()).Encode(obj)
+}
+
+func (c litContext) NoContent(status int) error {
+	c.Context.Writer.WriteHeader(status)
+	return nil
+}
+
+func (c litContext) Error(err error) {
+	// Gin parse error and add to Context.Errors
+	// But we don't use this way, just response this error
+	// c.Context.Error(err)
+
+	// If given error not in type HTTPError, prepare an internal error
+	var httpErr Error
+	if !errors.As(err, &httpErr) {
+		httpErr = &HTTPError{
+			Status: http.StatusInternalServerError,
+			Code:   http.StatusText(http.StatusInternalServerError),
+			Desc:   "Internal Server Error",
+		}
+	}
+
+	switch c.Request().Method {
+	case http.MethodHead:
+		err = c.NoContent(httpErr.StatusCode())
+	default:
+		err = c.JSON(httpErr.StatusCode(), httpErr)
+	}
+	if err != nil {
+		monitoring.
+			FromContext(c.Request().Context()).
+			Errorf(err, "Failed to write response")
+	}
 }

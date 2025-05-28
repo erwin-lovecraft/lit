@@ -40,9 +40,7 @@ func StartConsumeTxn(
 			semconv.MessagingKafkaMessageOffset(int(msg.Offset)),
 		),
 	)
-	m = monitoring.InjectTracingInfo(m, span.SpanContext())
-
-	m = m.With(logTags)
+	m = monitoring.InjectTracingInfo(m, span.SpanContext(), logTags)
 	ctx = monitoring.SetInContext(ctx, m)
 
 	return ctx, func(err error) {

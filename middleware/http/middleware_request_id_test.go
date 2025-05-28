@@ -20,7 +20,7 @@ func TestRequestIDMiddleware(t *testing.T) {
 	type handler struct {
 		Method string
 		Path   string
-		Func   lit.ErrHandlerFunc
+		Func   lit.HandlerFunc
 	}
 	type arg struct {
 		givenReq  *http.Request
@@ -35,12 +35,11 @@ func TestRequestIDMiddleware(t *testing.T) {
 				Method: http.MethodGet,
 				Path:   "/ping",
 				Func: func(c lit.Context) error {
-					c.JSON(http.StatusOK, gin.H{"message": "pong"})
-					return nil
+					return c.JSON(http.StatusOK, gin.H{"message": "pong"})
 				},
 			},
 			expStatus: http.StatusOK,
-			expBody:   `{"message":"pong"}`,
+			expBody:   "{\"message\":\"pong\"}\n",
 		},
 		"success - POST method": {
 			givenReq: httptest.NewRequest(http.MethodPost, "/ping", bytes.NewBufferString(`{"message":"pong"}`)),
@@ -53,12 +52,11 @@ func TestRequestIDMiddleware(t *testing.T) {
 						return err
 					}
 
-					c.JSON(http.StatusOK, msg)
-					return nil
+					return c.JSON(http.StatusOK, msg)
 				},
 			},
 			expStatus: http.StatusOK,
-			expBody:   `{"message":"pong"}`,
+			expBody:   "{\"message\":\"pong\"}\n",
 		},
 	}
 
@@ -76,7 +74,7 @@ func TestRequestIDMiddleware(t *testing.T) {
 			w := httptest.NewRecorder()
 			route, c, hdlRequest := lit.NewRouterForTest(w)
 			route.Use(RequestIDMiddleware())
-			route.HandleWithErr(tc.hdl.Method, tc.hdl.Path, tc.hdl.Func)
+			route.Handle(tc.hdl.Method, tc.hdl.Path, tc.hdl.Func)
 			if slices.Contains([]string{http.MethodPost, http.MethodPut, http.MethodPatch}, tc.givenReq.Method) {
 				tc.givenReq.Header.Set("Content-Type", "application/json")
 			}

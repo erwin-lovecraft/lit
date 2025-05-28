@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	"github.com/getsentry/sentry-go"
-	"go.uber.org/zap"
 )
 
 type sentryConfig struct {
@@ -14,9 +13,9 @@ type sentryConfig struct {
 	Version     string
 }
 
-func initSentry(cfg sentryConfig, logger *zap.Logger) (*sentry.Client, error) {
+func initSentry(cfg sentryConfig, logger *Monitor) (*sentry.Client, error) {
 	if cfg.DSN == "" {
-		logger.Info("Sentry DSN not provided. Not using Sentry Error Reporting")
+		logger.Infof("Sentry DSN not provided. Not using Sentry Error Reporting")
 		return nil, nil
 	}
 
@@ -44,7 +43,7 @@ func initSentry(cfg sentryConfig, logger *zap.Logger) (*sentry.Client, error) {
 		return nil, fmt.Errorf("create sentry client err: %w", err)
 	}
 
-	logger.Info("Sentry Error Reporter initialized")
+	logger.Infof("Sentry Error Reporter initialized")
 
 	return client, nil
 }

@@ -13,16 +13,13 @@ const (
 	httpRequestSpanName  = "http.request"
 
 	// Attributes
-	httpRequestMethodKey   = "http.request.method"
-	serverAddressKey       = "server.address"
-	userAgentKey           = "user_agent"
-	urlPathKey             = "url.path"
-	urlSchemeKey           = "url.scheme"
-	networkPeerAddressKey  = "network.peer.address"
-	networkProtocolVersion = "network.protocol.version"
-	httpRequestBodySize    = "http.request.body.size"
-	serviceNameKey         = "service.name"
-	httpRouteKey           = "http.route"
+	httpRequestMethodKey = "http.request.method"
+	serverAddressKey     = "server.address"
+	urlPathKey           = "url.path"
+	urlQueryKey          = "url.query"
+	httpRequestBodySize  = "http.request.body.size"
+	serviceNameKey       = "service.name"
+	httpRouteKey         = "http.route"
 
 	// Constants
 	requestHeaderContentType = "Content-Type"

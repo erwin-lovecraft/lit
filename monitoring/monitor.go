@@ -33,7 +33,7 @@ func (m *Monitor) WithTag(key string, value string) *Monitor {
 	clonedTags[key] = value
 	return &Monitor{
 		sentryClient: m.sentryClient,
-		logger:       m.logger.With(zap.String(key, value)),
+		logger:       m.logger,
 		logTags:      clonedTags,
 	}
 }
@@ -44,19 +44,29 @@ func (m *Monitor) With(tags map[string]string) *Monitor {
 		return nil
 	}
 
-	zapFields := make([]zap.Field, 0, len(tags))
-	clonedTags := maps.Clone(m.logTags)
 	// Add new log field
+	clonedTags := maps.Clone(m.logTags)
 	for k, v := range tags {
-		zapFields = append(zapFields, zap.String(k, v))
 		clonedTags[k] = v
 	}
 
 	return &Monitor{
 		sentryClient: m.sentryClient,
-		logger:       m.logger.With(zapFields...),
+		logger:       m.logger,
 		logTags:      clonedTags,
 	}
+}
+
+func (m *Monitor) getLogFields() []zap.Field {
+	if m == nil {
+		return nil
+	}
+
+	logFields := make([]zap.Field, 0, len(m.logTags))
+	for k, v := range m.logTags {
+		logFields = append(logFields, zap.String(k, v))
+	}
+	return logFields
 }
 
 // Infof logs the message using info level
@@ -64,7 +74,8 @@ func (m *Monitor) Infof(format string, args ...interface{}) {
 	if m == nil {
 		return
 	}
-	m.logger.Info(fmt.Sprintf(format, args...))
+
+	m.logger.Info(fmt.Sprintf(format, args...), m.getLogFields()...)
 }
 
 // Errorf logs the message using error level and reports the error to sentry
@@ -73,23 +84,25 @@ func (m *Monitor) Errorf(err error, msg string, args ...interface{}) {
 		return
 	}
 
+	logFields := m.getLogFields()
 	// Capture error.key, error.message and error.stack to log
-	logger := m.logger.With(
+	logFields = append(logFields,
 		zap.String("error.kind", reflect.TypeOf(err).String()),
 		zap.String("error.message", err.Error()),
 	)
+
 	if v, ok := err.(stackTracer); ok {
 		stack := fmt.Sprintf("%+v", v.StackTrace())
 		if len(stack) > 0 && stack[0] == '\n' {
 			stack = stack[1:]
 		}
-		logger = logger.With(zap.String("error.stack", stack))
+		logFields = append(logFields, zap.String("error.stack", stack))
 	}
 
 	if msg != "" {
-		logger.Error(fmt.Sprintf(msg+". Err: %v", append(args, err)...))
+		m.logger.Error(fmt.Sprintf(msg+". Err: %v", append(args, err)...), logFields...)
 	} else {
-		logger.Error(fmt.Sprintf("Err: %v", err))
+		m.logger.Error(fmt.Sprintf("Err: %v", err), logFields...)
 	}
 
 	m.ReportError(err, m.logTags)

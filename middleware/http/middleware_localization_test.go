@@ -28,7 +28,7 @@ func TestLocalizationMiddleware(t *testing.T) {
 			givenMessageID: "helloPerson",
 			expectedLang:   "en",
 			expectedStatus: http.StatusOK,
-			expectedBody:   "\"Hello Loc Dang\"",
+			expectedBody:   "\"Hello Loc Dang\"\n",
 		},
 		"Non accepted language": {
 			srcPath:        "testdata",
@@ -37,7 +37,7 @@ func TestLocalizationMiddleware(t *testing.T) {
 			givenMessageID: "helloPerson",
 			expectedLang:   "vi",
 			expectedStatus: http.StatusOK,
-			expectedBody:   "\"helloPerson\"",
+			expectedBody:   "\"helloPerson\"\n",
 		},
 		"Message ID not exist": {
 			srcPath:        "testdata",
@@ -46,7 +46,7 @@ func TestLocalizationMiddleware(t *testing.T) {
 			givenMessageID: "ThisMessageIDDoesNotExist",
 			expectedLang:   "en",
 			expectedStatus: http.StatusOK,
-			expectedBody:   "\"ThisMessageIDDoesNotExist\"",
+			expectedBody:   "\"ThisMessageIDDoesNotExist\"\n",
 		},
 		"Missing source path": {
 			srcPath:        "", // This will use default source path 'resources/i18n' and it should fail to load the message file.
@@ -55,7 +55,7 @@ func TestLocalizationMiddleware(t *testing.T) {
 			givenMessageID: "helloPerson",
 			expectedLang:   "en",
 			expectedStatus: http.StatusOK,
-			expectedBody:   "\"helloPerson\"",
+			expectedBody:   "\"helloPerson\"\n",
 		},
 		"Missing header value": {
 			srcPath:        "testdata",
@@ -63,7 +63,7 @@ func TestLocalizationMiddleware(t *testing.T) {
 			givenMessageID: "helloPerson",
 			expectedLang:   "en",
 			expectedStatus: http.StatusOK,
-			expectedBody:   "\"Hello Loc Dang\"",
+			expectedBody:   "\"Hello Loc Dang\"\n",
 		},
 	}
 
@@ -93,8 +93,7 @@ func TestLocalizationMiddleware(t *testing.T) {
 				rs := i18n.FromContext(ctx).Localize(tc.givenMessageID, map[string]interface{}{
 					"Name": "Loc Dang",
 				})
-				c.JSON(http.StatusOK, rs)
-				return nil
+				return c.JSON(http.StatusOK, rs)
 			})
 
 			// When
