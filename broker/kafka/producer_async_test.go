@@ -38,7 +38,7 @@ func TestAsyncProducer(t *testing.T) {
 	consumer, err := NewConsumerGroup(
 		context.Background(),
 		Config{AppName: "lit", Server: "local"},
-		givenTopic,
+		[]string{givenTopic},
 		[]string{kafkaURL},
 		msgHandler,
 		ConsumerWithAutoCreateTopics(),
