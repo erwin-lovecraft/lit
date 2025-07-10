@@ -53,12 +53,14 @@ func (c *Client) Send(ctx context.Context, p Payload) (Response, error) {
 	var err error
 	ctx, segEnd := instrumenthttp.StartOutgoingGroupSegment(ctx, c.extSvcInfo, c.serviceName, c.method, c.url)
 	defer func() { segEnd(err) }()
-	monitor := monitoring.FromContext(ctx)
 
+	logFields := []monitoring.Field{
+		monitoring.StringField("http.request.method", c.method),
+		monitoring.StringField("url.full", endpointURL),
+		monitoring.StringField("server.address", c.serviceName),
+	}
 	if !c.disableReqBodyLogging && (c.method == http.MethodPost || c.method == http.MethodPut || c.method == http.MethodPatch) {
-		v := p.Body
-
-		monitor.Infof("[ext_http_req] request body:(%s)", string(v))
+		logFields = append(logFields, monitoring.JSONField("http.request.body", p.Body))
 	}
 
 	// Create context with max timeout
@@ -72,12 +74,12 @@ func (c *Client) Send(ctx context.Context, p Payload) (Response, error) {
 	}
 
 	if !c.disableRespBodyLogging {
-		v := resp.Body
-
-		monitor.Infof("[ext_http_req] response body:(%s)", v)
-	} else {
-		monitor.Infof("[ext_http_req] skipping logging resp body")
+		logFields = append(logFields,
+			monitoring.IntField("http.response.status_code", resp.Status),
+			monitoring.JSONField("http.response.body", resp.Body))
 	}
+
+	monitoring.FromContext(ctx).Info("[outgoing_request] Send request", logFields...)
 
 	return resp, nil
 }
@@ -102,7 +104,7 @@ func (c *Client) execute(
 
 			// var err error
 			var status int
-			reqCtx, segEnd := instrumenthttp.StartOutgoingSegment(ctx, c.extSvcInfo, c.serviceName, req)
+			reqCtx, segEnd := instrumenthttp.StartOutgoingSegment(ctx, req)
 			defer func() { segEnd(status, err) }()
 			monitor := monitoring.FromContext(ctx)
 
@@ -114,15 +116,13 @@ func (c *Client) execute(
 
 			// start sending request
 			start := time.Now()
-			monitor.Infof("[ext_http_req] start new attempt (%d)", attempts)
-
 			resp, err := c.underlyingClient.Do(req)
 
 			monitor = monitor.
-				WithTag("ext_http_resp_duration", fmt.Sprintf("%dms", time.Since(start).Milliseconds()))
+				WithTag("duration", fmt.Sprintf("%dms", time.Since(start).Milliseconds()))
 			if err != nil {
 				// handle request error
-				monitor.Infof("[ext_http_req] end with error: (%+v), attempt (%d)", err, attempts) // intentionally not using Errorf for err as this is just info and the req can be retried.
+				monitor.Infof("[outgoing_request] end with error: (%+v), attempt (%d)", err, attempts) // intentionally not using Errorf for err as this is just info and the req can be retried.
 
 				if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 					return backoff.Permanent(ErrOverflowMaxWait) // stop retry by returning backoff.Permanent error
@@ -150,21 +150,18 @@ func (c *Client) execute(
 				// Only returns error for backoff retry function retries the call
 				// when attempts count haven't reached max retries
 				if uint64(attempts) <= c.timeoutAndRetryOption.maxRetries {
-					monitor.Infof("[ext_http_req] retry on status code: (%d), attempt (%d)", resp.StatusCode, attempts)
+					monitor.Infof("[outgoing_request] retry on status code: (%d), attempt (%d)", resp.StatusCode, attempts)
 					return fmt.Errorf("retry on status code %v", resp.StatusCode)
 				}
 			}
 
-			monitor.Infof("[ext_http_req] end with status code: (%d), attempt (%d)", resp.StatusCode, attempts)
-
 			// attempt to read response body
 			// we need to read the response body in the same function where we cancel the retry context
 			// otherwise, for big payload, the context will be cancelled while reading the body
-			monitor.Infof("[ext_http_req] attempting to read body: attempt (%d)", attempts)
 			respBody, err := readRespBodyFunc(resp.Body)
 			defer resp.Body.Close()
 			if err != nil {
-				monitor.Infof("[ext_http_req] err reading from body: (%+v), attempt (%d)", err, attempts)
+				monitor.Infof("[outgoing_request] err reading from body: (%+v), attempt (%d)", err, attempts)
 				if errors.Is(ctx.Err(), context.DeadlineExceeded) {
 					return backoff.Permanent(ErrOverflowMaxWait) // stop retry by returning backoff.Permanent error
 				}

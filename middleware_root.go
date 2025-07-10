@@ -5,10 +5,13 @@ import (
 	"fmt"
 	"net/http"
 	"runtime/debug"
-	"strconv"
 
 	"github.com/viebiz/lit/monitoring"
 	"github.com/viebiz/lit/monitoring/instrumenthttp"
+)
+
+const (
+	SkipLoggingResponseBodyKey = "skip_logging_response_body"
 )
 
 // rootMiddleware is a middleware function that handles tracing for incoming requests
@@ -42,7 +45,8 @@ func rootMiddleware(rootCtx context.Context) HandlerFunc {
 
 		// Update context, set instrument context and update response writer
 		c.SetRequestContext(ctx)
-		c.SetWriter(wrapWriter(ctx, c.Writer()))
+
+		c.SetWriter(wrapWriter(ctx, c.Writer(), c.Get, reqMeta.Method, reqMeta.Path))
 
 		// Continue handle request
 		c.Next()
@@ -58,19 +62,31 @@ func rootMiddleware(rootCtx context.Context) HandlerFunc {
 type responseRecorder struct {
 	ResponseWriter
 
-	ctx context.Context
+	ctx          context.Context
+	keyExtractor func(key string) (any, bool)
+	method, path string
 }
 
-func wrapWriter(ctx context.Context, w ResponseWriter) ResponseWriter {
-	return &responseRecorder{ResponseWriter: w, ctx: ctx}
+func wrapWriter(ctx context.Context, w ResponseWriter, keyExtractor func(key string) (any, bool), method, path string) ResponseWriter {
+	return &responseRecorder{ResponseWriter: w, ctx: ctx, keyExtractor: keyExtractor, method: method, path: path}
 }
 
 func (w *responseRecorder) Write(resp []byte) (n int, err error) {
 	defer func() {
 		if err != nil {
-			monitoring.FromContext(w.ctx).Errorf(err, "Failed to write response")
+			monitoring.FromContext(w.ctx).Error(err, "[incoming_request] Failed to write response",
+				monitoring.StringField("http.request.method", w.method),
+				monitoring.StringField("url.path", w.path))
 		} else {
-			monitoring.FromContext(w.ctx).Infof("Wrote %s", string(resp))
+			logFields := []monitoring.Field{
+				monitoring.StringField("http.request.method", w.method),
+				monitoring.StringField("url.path", w.path),
+			}
+			if _, exists := w.keyExtractor(SkipLoggingResponseBodyKey); !exists {
+				logFields = append(logFields, monitoring.JSONField("http.response.body", resp))
+			}
+
+			monitoring.FromContext(w.ctx).Info("[incoming_request] Wrote response", logFields...)
 		}
 	}()
 
@@ -78,16 +94,11 @@ func (w *responseRecorder) Write(resp []byte) (n int, err error) {
 }
 
 func logIncomingRequest(ctx Context, reqMeta instrumenthttp.RequestMetadata, msg string) {
-	tags := map[string]string{
-		"http.response.status": strconv.Itoa(ctx.Writer().Status()),
-		"http.response.size":   strconv.Itoa(ctx.Writer().Size()),
-	}
-
-	if len(reqMeta.BodyToLog) > 0 {
-		tags["http.request.body"] = string(reqMeta.BodyToLog)
-	}
-
-	monitoring.FromContext(ctx.Request().Context()).
-		With(tags).
-		Infof(msg)
+	monitoring.FromContext(ctx.Request().Context()).Info(msg,
+		monitoring.StringField("http.request.method", reqMeta.Method),
+		monitoring.StringField("url.path", reqMeta.Path),
+		monitoring.StringField("url.query", reqMeta.Query),
+		monitoring.JSONField("http.request.body", reqMeta.BodyToLog),
+		monitoring.IntField("http.response.status_code", ctx.Writer().Status()),
+		monitoring.IntField("http.response.body.size", ctx.Writer().Size()))
 }

@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
-	"strconv"
 
 	"github.com/viebiz/lit/monitoring"
 	"go.opentelemetry.io/otel"
@@ -18,44 +17,34 @@ import (
 )
 
 func StartIncomingRequest(m *monitoring.Monitor, r *http.Request, route string) (context.Context, RequestMetadata, func(int, error)) {
-	logTags := map[string]string{
-		httpRequestMethodKey: r.Method,
-		httpRouteKey:         route,
-	}
-
 	attrs := []attribute.KeyValue{
-		semconv.HTTPRequestMethodKey.String(r.Method),
-		semconv.HTTPRoute(route),
-		semconv.URLPath(r.URL.Path),
 		semconv.URLScheme(r.URL.Scheme),
 		semconv.UserAgentOriginal(r.UserAgent()),
-		semconv.ServerAddressKey.String(r.Host),
-		semconv.NetworkPeerAddress(r.RemoteAddr),
-		semconv.NetworkProtocolVersion(r.Proto),
+		semconv.HTTPRoute(route),
+		semconv.HTTPRequestMethodKey.String(r.Method),
+		semconv.URLPath(r.URL.Path),
 	}
 
 	// Add query parameters if present
 	if r.URL.RawQuery != "" {
 		attrs = append(attrs, semconv.URLQuery(r.URL.RawQuery))
-		logTags[urlQueryKey] = r.URL.RawQuery
 	}
 
 	ctx := r.Context()
 
 	// Collect request metadata to log
 	reqMeta := RequestMetadata{
-		Method:   r.Method,
-		Endpoint: r.URL.Path,
+		Method: r.Method,
+		Path:   r.URL.Path,
+		Query:  r.URL.RawQuery,
 	}
 
 	// Log request body
 	if r.ContentLength > 0 {
-		logTags[httpRequestBodySize] = strconv.FormatInt(r.ContentLength, 10)
 		attrs = append(attrs, semconv.HTTPRequestBodySize(int(r.ContentLength)))
-	}
-
-	if bodyBytes := readRequestBody(m, r); len(bodyBytes) > 0 {
-		reqMeta.BodyToLog = bodyBytes
+		if bodyBytes := readRequestBody(m, r); len(bodyBytes) > 0 {
+			reqMeta.BodyToLog = bodyBytes
+		}
 	}
 
 	// Extract trace context from request headers
@@ -68,7 +57,7 @@ func StartIncomingRequest(m *monitoring.Monitor, r *http.Request, route string) 
 		trace.WithAttributes(attrs...),
 	)
 
-	m = monitoring.InjectTracingInfo(m, span.SpanContext(), logTags)
+	m = monitoring.InjectTracingInfo(m, span.SpanContext(), nil)
 	ctx = monitoring.SetInContext(ctx, m)
 
 	return ctx, reqMeta,
@@ -85,15 +74,12 @@ func StartIncomingRequest(m *monitoring.Monitor, r *http.Request, route string) 
 
 type RequestMetadata struct {
 	Method    string
-	Endpoint  string
+	Path      string
+	Query     string
 	BodyToLog []byte
 }
 
 func readRequestBody(m *monitoring.Monitor, r *http.Request) []byte {
-	if r.ContentLength == 0 {
-		return nil
-	}
-
 	if r.Method != http.MethodPost && r.Method != http.MethodPut && r.Method != http.MethodPatch {
 		return nil
 	}
