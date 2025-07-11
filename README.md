@@ -1,8 +1,16 @@
 # Lightning
 
-## Description
+Lightning is a modular, production-ready collection of Go libraries that helps backend developers build reliable applications faster. It reduces boilerplate by offering reusable components for key tasks such as:
 
-Go Libs: Lightning is a collection of Go libraries that provide a set of tools to help developers build applications faster and more efficiently. The libraries are designed to be simple, easy to use, and easy to understand. They are also designed to be flexible and extensible, so that developers can easily customize them to meet their specific needs.
+- HTTP routing with authentication guards and middleware
+- gRPC server and client setup with service registration
+- Internationalization (i18n) support
+- Kafka integration 
+- Redis integration
+- Structured, context-aware logging
+- Configuration management with environment overrides
+
+Designed to be simple, extensible, and easy to adopt, Lit lets teams focus on business logic instead of infrastructure scaffolding.
 
 ## Project status
 
