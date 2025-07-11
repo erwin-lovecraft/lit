@@ -149,14 +149,14 @@ func (_c *MockRouter_Get_Call) RunAndReturn(run func(string, HandlerFunc, ...Han
 	return _c
 }
 
-// Group provides a mock function with given fields: prefix, middleware
-func (_m *MockRouter) Group(prefix string, middleware ...HandlerFunc) Route {
+// Group provides a mock function with given fields: prefix, routerFunc, middleware
+func (_m *MockRouter) Group(prefix string, routerFunc func(Router), middleware ...HandlerFunc) Router {
 	_va := make([]interface{}, len(middleware))
 	for _i := range middleware {
 		_va[_i] = middleware[_i]
 	}
 	var _ca []interface{}
-	_ca = append(_ca, prefix)
+	_ca = append(_ca, prefix, routerFunc)
 	_ca = append(_ca, _va...)
 	ret := _m.Called(_ca...)
 
@@ -164,12 +164,12 @@ func (_m *MockRouter) Group(prefix string, middleware ...HandlerFunc) Route {
 		panic("no return value specified for Group")
 	}
 
-	var r0 Route
-	if rf, ok := ret.Get(0).(func(string, ...HandlerFunc) Route); ok {
-		r0 = rf(prefix, middleware...)
+	var r0 Router
+	if rf, ok := ret.Get(0).(func(string, func(Router), ...HandlerFunc) Router); ok {
+		r0 = rf(prefix, routerFunc, middleware...)
 	} else {
 		if ret.Get(0) != nil {
-			r0 = ret.Get(0).(Route)
+			r0 = ret.Get(0).(Router)
 		}
 	}
 
@@ -183,31 +183,32 @@ type MockRouter_Group_Call struct {
 
 // Group is a helper method to define mock.On call
 //   - prefix string
+//   - routerFunc func(Router)
 //   - middleware ...HandlerFunc
-func (_e *MockRouter_Expecter) Group(prefix interface{}, middleware ...interface{}) *MockRouter_Group_Call {
+func (_e *MockRouter_Expecter) Group(prefix interface{}, routerFunc interface{}, middleware ...interface{}) *MockRouter_Group_Call {
 	return &MockRouter_Group_Call{Call: _e.mock.On("Group",
-		append([]interface{}{prefix}, middleware...)...)}
+		append([]interface{}{prefix, routerFunc}, middleware...)...)}
 }
 
-func (_c *MockRouter_Group_Call) Run(run func(prefix string, middleware ...HandlerFunc)) *MockRouter_Group_Call {
+func (_c *MockRouter_Group_Call) Run(run func(prefix string, routerFunc func(Router), middleware ...HandlerFunc)) *MockRouter_Group_Call {
 	_c.Call.Run(func(args mock.Arguments) {
-		variadicArgs := make([]HandlerFunc, len(args)-1)
-		for i, a := range args[1:] {
+		variadicArgs := make([]HandlerFunc, len(args)-2)
+		for i, a := range args[2:] {
 			if a != nil {
 				variadicArgs[i] = a.(HandlerFunc)
 			}
 		}
-		run(args[0].(string), variadicArgs...)
+		run(args[0].(string), args[1].(func(Router)), variadicArgs...)
 	})
 	return _c
 }
 
-func (_c *MockRouter_Group_Call) Return(_a0 Route) *MockRouter_Group_Call {
+func (_c *MockRouter_Group_Call) Return(_a0 Router) *MockRouter_Group_Call {
 	_c.Call.Return(_a0)
 	return _c
 }
 
-func (_c *MockRouter_Group_Call) RunAndReturn(run func(string, ...HandlerFunc) Route) *MockRouter_Group_Call {
+func (_c *MockRouter_Group_Call) RunAndReturn(run func(string, func(Router), ...HandlerFunc) Router) *MockRouter_Group_Call {
 	_c.Call.Return(run)
 	return _c
 }
@@ -705,6 +706,69 @@ func (_c *MockRouter_Put_Call) Return(_a0 Route) *MockRouter_Put_Call {
 }
 
 func (_c *MockRouter_Put_Call) RunAndReturn(run func(string, HandlerFunc, ...HandlerFunc) Route) *MockRouter_Put_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
+// Route provides a mock function with given fields: prefix, middleware
+func (_m *MockRouter) Route(prefix string, middleware ...HandlerFunc) Router {
+	_va := make([]interface{}, len(middleware))
+	for _i := range middleware {
+		_va[_i] = middleware[_i]
+	}
+	var _ca []interface{}
+	_ca = append(_ca, prefix)
+	_ca = append(_ca, _va...)
+	ret := _m.Called(_ca...)
+
+	if len(ret) == 0 {
+		panic("no return value specified for Route")
+	}
+
+	var r0 Router
+	if rf, ok := ret.Get(0).(func(string, ...HandlerFunc) Router); ok {
+		r0 = rf(prefix, middleware...)
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(Router)
+		}
+	}
+
+	return r0
+}
+
+// MockRouter_Route_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Route'
+type MockRouter_Route_Call struct {
+	*mock.Call
+}
+
+// Route is a helper method to define mock.On call
+//   - prefix string
+//   - middleware ...HandlerFunc
+func (_e *MockRouter_Expecter) Route(prefix interface{}, middleware ...interface{}) *MockRouter_Route_Call {
+	return &MockRouter_Route_Call{Call: _e.mock.On("Route",
+		append([]interface{}{prefix}, middleware...)...)}
+}
+
+func (_c *MockRouter_Route_Call) Run(run func(prefix string, middleware ...HandlerFunc)) *MockRouter_Route_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		variadicArgs := make([]HandlerFunc, len(args)-1)
+		for i, a := range args[1:] {
+			if a != nil {
+				variadicArgs[i] = a.(HandlerFunc)
+			}
+		}
+		run(args[0].(string), variadicArgs...)
+	})
+	return _c
+}
+
+func (_c *MockRouter_Route_Call) Return(_a0 Router) *MockRouter_Route_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockRouter_Route_Call) RunAndReturn(run func(string, ...HandlerFunc) Router) *MockRouter_Route_Call {
 	_c.Call.Return(run)
 	return _c
 }

@@ -303,7 +303,9 @@ func TestMonitor_ReportError(t *testing.T) {
 
 				return false
 			}))
-			exceptions := transport.lastEvent.Exception
+
+			require.Greater(t, len(transport.Events()), 0)
+			exceptions := transport.Events()[len(transport.Events())-1].Exception
 			require.True(t, len(exceptions) > 0)
 			lastException := exceptions[len(exceptions)-1]
 			require.Equal(t, lastException.Type, "*errors.errorString")
@@ -313,8 +315,8 @@ func TestMonitor_ReportError(t *testing.T) {
 	}
 }
 
-func setupClientTest() (*sentry.Client, *TransportMock) {
-	transport := &TransportMock{}
+func setupClientTest() (*sentry.Client, *sentry.MockTransport) {
+	transport := &sentry.MockTransport{}
 	client, _ := sentry.NewClient(sentry.ClientOptions{
 		Dsn:       "https://whatever@example.com/16042000",
 		Transport: transport,
