@@ -3,6 +3,7 @@ package kafka
 import (
 	"context"
 	"errors"
+	"strings"
 
 	"github.com/IBM/sarama"
 	pkgerrors "github.com/pkg/errors"
@@ -14,7 +15,7 @@ type ConsumerGroup struct {
 	monitor  *monitoring.Monitor
 	client   sarama.Client
 	consumer sarama.ConsumerGroup
-	topic    string
+	topic    []string
 	handler  messageHandler
 }
 
@@ -24,7 +25,7 @@ type ConsumeHandler func(ctx context.Context, msg ConsumerMessage) error
 func NewConsumerGroup(
 	ctx context.Context,
 	cfg Config,
-	topic string,
+	topic []string,
 	brokers []string,
 	handler ConsumeHandler,
 	opts ...ConsumerOption,
@@ -54,7 +55,7 @@ func NewConsumerGroup(
 	monitor = monitor.With(map[string]string{
 		"kafka.consumer.client_id": consumerCfg.ClientID,
 		"kafka.consumer.group_id":  consumerCfg.groupID,
-		"kafka.consumer.topic":     topic,
+		"kafka.consumer.topic":     strings.Join(topic, ","),
 	})
 
 	msgHandler := messageHandler{
@@ -86,7 +87,7 @@ func (c *ConsumerGroup) Consume(ctx context.Context) error {
 			if ctx.Err() != nil {
 				return
 			}
-			if err := c.consumer.Consume(ctx, []string{c.topic}, c.handler); err != nil {
+			if err := c.consumer.Consume(ctx, c.topic, c.handler); err != nil {
 				consumeErr <- pkgerrors.Wrap(err, "consuming failed")
 				return
 			}

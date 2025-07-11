@@ -23,7 +23,7 @@ func TestNewConsumer(t *testing.T) {
 	type arg struct {
 		givenBrokerURL            string
 		givenAppCfg               Config
-		givenTopic                string
+		givenTopic                []string
 		givenConsumerOptions      []ConsumerOption
 		expErr                    error
 		expPayloadLoggingDisabled bool
@@ -32,24 +32,24 @@ func TestNewConsumer(t *testing.T) {
 		"invalid url": {
 			givenBrokerURL: "notvalid",
 			givenAppCfg:    Config{AppName: "lit", Server: "local"},
-			givenTopic:     "athena",
+			givenTopic:     []string{"kafka-kaboom"},
 			expErr:         errors.New("client init failed: kafka: client has run out of available brokers to talk to: dial tcp: address notvalid: missing port in address"),
 		},
 		"broker unreachable": {
 			givenBrokerURL: "notvalid:9092",
 			givenAppCfg:    Config{AppName: "lit", Server: "local"},
-			givenTopic:     "athena",
+			givenTopic:     []string{"kafka-kaboom"},
 			expErr:         errors.New("client init failed: kafka: client has run out of available brokers to talk to"),
 		},
 		"success": {
 			givenBrokerURL: getKafkaURL(),
 			givenAppCfg:    Config{AppName: "lit", Server: "local"},
-			givenTopic:     "athena",
+			givenTopic:     []string{"kafka-kaboom"},
 		},
 		"success with consumer option": {
 			givenBrokerURL: getKafkaURL(),
 			givenAppCfg:    Config{AppName: "lit", Server: "local"},
-			givenTopic:     "athena",
+			givenTopic:     []string{"kafka-kaboom"},
 			givenConsumerOptions: []ConsumerOption{
 				ConsumerWithOffsetNewest(),
 			},
@@ -57,7 +57,7 @@ func TestNewConsumer(t *testing.T) {
 		"success with custom group ID": {
 			givenBrokerURL: getKafkaURL(),
 			givenAppCfg:    Config{AppName: "lit", Server: "local"},
-			givenTopic:     "athena",
+			givenTopic:     []string{"kafka-kaboom"},
 			givenConsumerOptions: []ConsumerOption{
 				ConsumerWithCustomConsumerGroupID("project-app_subc"),
 			},
@@ -65,7 +65,7 @@ func TestNewConsumer(t *testing.T) {
 		"success with disabled payload logging": {
 			givenBrokerURL: getKafkaURL(),
 			givenAppCfg:    Config{AppName: "lit", Server: "local"},
-			givenTopic:     "athena",
+			givenTopic:     []string{"kafka-kaboom"},
 			givenConsumerOptions: []ConsumerOption{
 				ConsumerDisablePayloadLogging(),
 			},
@@ -154,7 +154,7 @@ func TestConsume(t *testing.T) {
 			consumer, err := NewConsumerGroup(
 				context.Background(),
 				Config{AppName: "lit", Server: "local"},
-				tc.givenTopic,
+				[]string{tc.givenTopic},
 				[]string{kafkaURL},
 				msgHandler,
 				tc.givenOption,
