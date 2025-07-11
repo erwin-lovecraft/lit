@@ -57,6 +57,7 @@ var (
 	ErrNoPrivateAddress = errors.New("no private ip address")
 	ErrOverTimeLimit    = errors.New("over the time limit")
 	ErrInvalidMachineID = errors.New("invalid machine id")
+	ErrInvalidSequence  = errors.New("invalid sequence number")
 )
 
 var defaultInterfaceAddrs = net.InterfaceAddrs
@@ -178,8 +179,9 @@ func privateIPv4(interfaceAddrs types.InterfaceAddrs) (net.IP, error) {
 }
 
 func isPrivateIPv4(ip net.IP) bool {
+	// Allow private IP addresses (RFC1918) and link-local addresses (RFC3927)
 	return ip != nil &&
-		(ip[0] == 10 || ip[0] == 172 && (ip[1] >= 16 && ip[1] < 32) || ip[0] == 192 && ip[1] == 168)
+		(ip[0] == 10 || ip[0] == 172 && (ip[1] >= 16 && ip[1] < 32) || ip[0] == 192 && ip[1] == 168 || ip[0] == 169 && ip[1] == 254)
 }
 
 func lower16BitPrivateIP(interfaceAddrs types.InterfaceAddrs) (uint16, error) {
@@ -210,6 +212,25 @@ func SequenceNumber(id uint64) uint64 {
 func MachineID(id uint64) uint64 {
 	const maskMachineID = uint64(1<<BitLenMachineID - 1)
 	return id & maskMachineID
+}
+
+// Compose creates a Sonyflake ID from its parts.
+func Compose(sf *Sonyflake, t time.Time, sequence uint16, machineID uint16) (uint64, error) {
+	elapsedTime := toSonyflakeTime(t.UTC()) - sf.startTime
+	if elapsedTime < 0 {
+		return 0, ErrStartTimeAhead
+	}
+	if elapsedTime >= 1<<BitLenTime {
+		return 0, ErrOverTimeLimit
+	}
+
+	if sequence >= 1<<BitLenSequence {
+		return 0, ErrInvalidSequence
+	}
+
+	return uint64(elapsedTime)<<(BitLenSequence+BitLenMachineID) |
+		uint64(sequence)<<BitLenMachineID |
+		uint64(machineID), nil
 }
 
 // Decompose returns a set of Sonyflake ID parts.

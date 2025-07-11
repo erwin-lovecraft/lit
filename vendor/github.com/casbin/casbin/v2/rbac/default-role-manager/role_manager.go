@@ -15,6 +15,7 @@
 package defaultrolemanager
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -203,6 +204,7 @@ type RoleManagerImpl struct {
 	domainMatchingFunc rbac.MatchingFunc
 	logger             log.Logger
 	matchingFuncCache  *util.SyncLRUCache
+	mutex              sync.Mutex
 }
 
 // NewRoleManagerImpl is the constructor for creating an instance of the
@@ -348,6 +350,10 @@ func (rm *RoleManagerImpl) HasLink(name1 string, name2 string, domains ...string
 	if name1 == name2 || (rm.matchingFunc != nil && rm.Match(name1, name2)) {
 		return true, nil
 	}
+
+	// Lock to prevent race conditions between getRole and removeRole
+	rm.mutex.Lock()
+	defer rm.mutex.Unlock()
 
 	user, userCreated := rm.getRole(name1)
 	role, roleCreated := rm.getRole(name2)
@@ -712,6 +718,12 @@ func (dm *DomainManager) BuildRelationship(name1 string, name2 string, domain ..
 	return nil
 }
 
+// DeleteDomain deletes the specified domain from DomainManager.
+func (dm *DomainManager) DeleteDomain(domain string) error {
+	dm.rmMap.Delete(domain)
+	return nil
+}
+
 type RoleManager struct {
 	*DomainManager
 }
@@ -720,6 +732,11 @@ func NewRoleManager(maxHierarchyLevel int) *RoleManager {
 	rm := &RoleManager{}
 	rm.DomainManager = NewDomainManager(maxHierarchyLevel)
 	return rm
+}
+
+// DeleteDomain does nothing for RoleManagerImpl (no domain concept).
+func (rm *RoleManagerImpl) DeleteDomain(domain string) error {
+	return errors.New("DeleteDomain is not supported by RoleManagerImpl (no domain concept)")
 }
 
 type ConditionalRoleManager struct {
@@ -755,6 +772,10 @@ func (crm *ConditionalRoleManager) HasLink(name1 string, name2 string, domains .
 	if name1 == name2 || (crm.matchingFunc != nil && crm.Match(name1, name2)) {
 		return true, nil
 	}
+
+	// Lock to prevent race conditions between getRole and removeRole
+	crm.mutex.Lock()
+	defer crm.mutex.Unlock()
 
 	user, userCreated := crm.getRole(name1)
 	role, roleCreated := crm.getRole(name2)
