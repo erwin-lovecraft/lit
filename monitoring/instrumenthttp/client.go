@@ -23,27 +23,16 @@ func StartOutgoingGroupSegment(
 ) (context.Context, func(error)) {
 	m := monitoring.FromContext(ctx)
 
-	logTags := map[string]string{
-		serviceNameKey:       serviceName,
-		serverAddressKey:     extSvcInfo.Hostname + ":" + extSvcInfo.Port,
-		httpRequestMethodKey: reqMethod,
-		urlPathKey:           reqURL,
-	}
-
 	ctx, span := tracer.Start(ctx, httpOutgoingSpanName,
 		trace.WithSpanKind(trace.SpanKindClient),
 		trace.WithAttributes(
 			semconv.ServiceName(serviceName),
-			semconv.ServerAddress(extSvcInfo.Hostname+":"+extSvcInfo.Port),
 			semconv.HTTPRequestMethodKey.String(reqMethod),
-			semconv.URLPath(reqURL),
+			semconv.URLFull(reqURL),
+			semconv.ServerAddress(extSvcInfo.Hostname+":"+extSvcInfo.Port),
 		),
 	)
-	ctx = monitoring.SetInContext(ctx,
-		monitoring.
-			InjectOutgoingTracingInfo(m, span.SpanContext()).
-			With(logTags),
-	)
+	ctx = monitoring.SetInContext(ctx, monitoring.InjectOutgoingTracingInfo(m, span.SpanContext()))
 
 	return ctx, func(err error) {
 		if err != nil {
@@ -55,22 +44,9 @@ func StartOutgoingGroupSegment(
 }
 
 // StartOutgoingSegment starts a outgoing HTTP client segment. The return is the `End` func to close the segment
-func StartOutgoingSegment(
-	ctx context.Context,
-	extSvcInfo monitoring.ExternalServiceInfo,
-	serviceName string,
-	r *http.Request,
-) (context.Context, func(int, error)) {
+func StartOutgoingSegment(ctx context.Context, r *http.Request) (context.Context, func(int, error)) {
 	// Start a child span as segment
-	ctx, span := tracer.Start(ctx, httpRequestSpanName,
-		trace.WithSpanKind(trace.SpanKindClient),
-		trace.WithAttributes(
-			semconv.ServiceName(serviceName),
-			semconv.ServerAddress(extSvcInfo.Hostname+":"+extSvcInfo.Port),
-			semconv.HTTPRequestMethodKey.String(r.Method),
-			semconv.URLPath(r.URL.Path),
-		),
-	)
+	ctx, span := tracer.Start(ctx, httpRequestSpanName, trace.WithSpanKind(trace.SpanKindClient))
 
 	// Inject Span Context to request header before send
 	otel.GetTextMapPropagator().Inject(ctx, propagation.HeaderCarrier(r.Header))

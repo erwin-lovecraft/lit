@@ -25,23 +25,13 @@ func TestStartOutgoingGroupSegment_NoCurSpan(t *testing.T) {
 func TestStartOutgoingGroupSegment_WithCurSpan(t *testing.T) {
 	ctx, _ := tracer.Start(context.Background(), "test")
 
-	_, end := StartOutgoingSegment(
-		ctx,
-		monitoring.ExternalServiceInfo{},
-		"svc",
-		httptest.NewRequest(http.MethodGet, "/url", nil),
-	)
+	_, end := StartOutgoingSegment(ctx, httptest.NewRequest(http.MethodGet, "/url", nil))
 
 	end(200, errors.New("some err"))
 }
 
 func TestStartOutgoingSegment_NoCurSpan(t *testing.T) {
-	_, end := StartOutgoingSegment(
-		context.Background(),
-		monitoring.ExternalServiceInfo{},
-		"svc",
-		httptest.NewRequest(http.MethodGet, "/url", nil),
-	)
+	_, end := StartOutgoingSegment(context.Background(), httptest.NewRequest(http.MethodGet, "/url", nil))
 
 	end(200, errors.New("some err"))
 }
@@ -49,12 +39,7 @@ func TestStartOutgoingSegment_NoCurSpan(t *testing.T) {
 func TestStartOutgoingSegment_WithCurSpan(t *testing.T) {
 	ctx, _ := tracer.Start(context.Background(), "test")
 
-	_, end := StartOutgoingSegment(
-		ctx,
-		monitoring.ExternalServiceInfo{},
-		"svc",
-		httptest.NewRequest(http.MethodGet, "/url", nil),
-	)
+	_, end := StartOutgoingSegment(ctx, httptest.NewRequest(http.MethodGet, "/url", nil))
 
 	end(200, errors.New("some err"))
 }

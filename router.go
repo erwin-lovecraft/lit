@@ -184,6 +184,7 @@ func toGinHandler(h HandlerFunc) gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		litCtx := litContext{Context: ctx}
 		if err := h(litCtx); err != nil {
+			litCtx.Abort() // To skip all middleware after
 			litCtx.Error(err)
 		}
 	}

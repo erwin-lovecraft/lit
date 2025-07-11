@@ -69,6 +69,14 @@ func (m *Monitor) getLogFields() []zap.Field {
 	return logFields
 }
 
+func (m *Monitor) Info(msg string, fields ...Field) {
+	if m == nil {
+		return
+	}
+
+	m.logger.Info(msg, append(fields, m.getLogFields()...)...)
+}
+
 // Infof logs the message using info level
 func (m *Monitor) Infof(format string, args ...interface{}) {
 	if m == nil {
@@ -76,6 +84,35 @@ func (m *Monitor) Infof(format string, args ...interface{}) {
 	}
 
 	m.logger.Info(fmt.Sprintf(format, args...), m.getLogFields()...)
+}
+
+func (m *Monitor) Error(err error, msg string, fields ...Field) {
+	if m == nil {
+		return
+	}
+
+	// Capture error.key, error.message and error.stack to log
+	fields = append(fields,
+		zap.String("error.kind", reflect.TypeOf(err).String()),
+		zap.String("error.message", err.Error()),
+	)
+	fields = append(fields, m.getLogFields()...)
+
+	if v, ok := err.(stackTracer); ok {
+		stack := fmt.Sprintf("%+v", v.StackTrace())
+		if len(stack) > 0 && stack[0] == '\n' {
+			stack = stack[1:]
+		}
+		fields = append(fields, zap.String("error.stack", stack))
+	}
+
+	if msg != "" {
+		m.logger.Error(fmt.Sprintf(msg+". Err: %v", err), fields...)
+	} else {
+		m.logger.Error(fmt.Sprintf("Err: %v", err), fields...)
+	}
+
+	m.ReportError(err, m.logTags)
 }
 
 // Errorf logs the message using error level and reports the error to sentry

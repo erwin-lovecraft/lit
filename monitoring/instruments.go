@@ -33,14 +33,14 @@ func InjectFields(ctx context.Context, tags map[string]string) context.Context {
 	return SetInContext(ctx, FromContext(ctx).With(tags))
 }
 
-func InjectTracingInfo(m *Monitor, spanCtx trace.SpanContext, tags map[string]string) *Monitor {
-	if tags == nil {
-		tags = make(map[string]string)
+func InjectTracingInfo(m *Monitor, spanCtx trace.SpanContext, extraTags map[string]string) *Monitor {
+	if extraTags == nil {
+		extraTags = make(map[string]string)
 	}
-	tags[traceIDKey] = spanCtx.TraceID().String()
-	tags[spanIDKey] = spanCtx.SpanID().String()
+	extraTags[traceIDKey] = spanCtx.TraceID().String()
+	extraTags[spanIDKey] = spanCtx.SpanID().String()
 
-	return m.With(tags)
+	return m.With(extraTags)
 }
 
 func InjectOutgoingTracingInfo(m *Monitor, spanCtx trace.SpanContext) *Monitor {

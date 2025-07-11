@@ -74,8 +74,6 @@ func TestClientConn_Invoke(t *testing.T) {
 				},
 			},
 			expLog: []map[string]string{
-				{"level": "INFO", "ts": "2025-02-23T18:18:48.186+0700", "msg": "Sentry DSN not provided. Not using Sentry Error Reporting", "server.name": "lightning", "environment": "dev", "version": "1.0.0"},
-				{"level": "INFO", "ts": "2025-02-23T18:18:48.186+0700", "msg": "OTelExporter URL not provided. Not using Distributed Tracing", "server.name": "lightning", "environment": "dev", "version": "1.0.0"},
 				{"level": "INFO", "ts": "2025-02-23T18:18:48.186+0700", "msg": "grpc.outgoing_request", "grpc.request": `{"date":"M41.993.32"}`, "outgoing_span_id": "0000000000000000", "outgoing_trace_id": "00000000000000000000000000000000", "rpc.method": "GetWeatherInfo", "rpc.service": "weather.WeatherService", "rpc.system": "grpc", "server.address": "localhost:50052", "server.name": "lightning", "environment": "dev", "version": "1.0.0"},
 			},
 		},
@@ -117,7 +115,7 @@ func TestClientConn_Invoke(t *testing.T) {
 				testutil.Equal(t, tc.expResp, resp, testutil.IgnoreUnexported[*testdata.WeatherResponse](testdata.WeatherResponse{}, testdata.WeatherDetail{}))
 			}
 
-			pasedLogs, err := parseLog(logBuffer.Bytes())
+			pasedLogs, err := parseLog(logBuffer.Bytes(), 2)
 			require.NoError(t, err)
 			testutil.Equal(t, tc.expLog, pasedLogs, testutil.IgnoreSliceMapEntries(func(k string, v string) bool {
 				if k == "ts" {
@@ -138,11 +136,14 @@ func TestClientConn_Invoke(t *testing.T) {
 	}
 }
 
-func parseLog(b []byte) ([]map[string]string, error) {
+func parseLog(b []byte, skip int) ([]map[string]string, error) {
 	var result []map[string]string
-	for _, s := range strings.Split(string(b), "\n") {
+	for idx, s := range strings.Split(string(b), "\n") {
 		if s == "" {
 			break
+		}
+		if idx < skip {
+			continue
 		}
 		var r map[string]string
 		if err := json.Unmarshal([]byte(s), &r); err != nil {
