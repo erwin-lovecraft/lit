@@ -30,7 +30,7 @@ func (i enforcerLogger) LogEnforce(matcher string, request []interface{}, result
 		return
 	}
 
-	i.Infof("Enforced %v, (%s), (%v), hit policy: %v", result, request, matcher, explains)
+	i.Infof("Enforced %v, (%v), (%v), hit policy: %v", result, request, matcher, explains)
 }
 
 func (i enforcerLogger) LogRole(roles []string) {

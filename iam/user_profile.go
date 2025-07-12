@@ -49,7 +49,7 @@ func extractRolesFromClaims(claims Claims) ([]string, error) {
 		for idx, item := range v {
 			role, ok := item.(string)
 			if !ok {
-				role = fmt.Sprintf("%s", item)
+				role = fmt.Sprintf("%v", item)
 			}
 
 			rs[idx] = role

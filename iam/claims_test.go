@@ -2,6 +2,8 @@ package iam
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"testing"
 	"time"
 
@@ -70,13 +72,15 @@ func TestClaims_UnmarshalJSON(t *testing.T) {
 	nbf := time.Date(2024, time.July, 24, 0, 0, 0, 0, time.UTC).Unix()
 	exp := time.Date(2024, time.July, 24, 1, 0, 0, 0, time.UTC).Unix()
 
-	tcs := map[string]struct {
+	type tc struct {
 		in        string
 		expResult Claims
 		expErr    error
-	}{
+	}
+
+	cases := map[string]tc{
 		"success": {
-			in: "{\"aud\":\"https://resource-api.com\",\"client_id\":\"CLIENT-UUID\",\"exp\":1721782800,\"https://resource.api\":{\"preferred_contact\":\"phone\"},\"iat\":1721779200,\"iss\":\"https://limitless.mukagen.com\",\"jti\":\"JWTID\",\"nbf\":1721779200,\"scope\":\"openid profile reademail\",\"sub\":\"mukagen|USER-ID\"}",
+			in: `{"aud":"https://resource-api.com","client_id":"CLIENT-UUID","exp":1721782800,"https://resource.api":{"preferred_contact":"phone"},"iat":1721779200,"iss":"https://limitless.mukagen.com","jti":"JWTID","nbf":1721779200,"scope":"openid profile reademail","sub":"mukagen|USER-ID"}`,
 			expResult: Claims{
 				RegisteredClaims: jwt.RegisteredClaims{
 					Issuer:    "https://limitless.mukagen.com",
@@ -97,27 +101,38 @@ func TestClaims_UnmarshalJSON(t *testing.T) {
 			},
 		},
 		"success - empty claims": {
-			in:        "{}",
+			in:        `{}`,
 			expResult: Claims{},
+		},
+		"invalid JSON": {
+			in:     `{`, // malformed JSON
+			expErr: errors.New("unexpected end of JSON input"),
+		},
+		"aud wrong type": {
+			in:     `{"iss":"foo","sub":"bar","aud":123}`, // unmarshalAud sẽ lỗi
+			expErr: fmt.Errorf("unknown audience type"),
+		},
+		"invalid iat parse": {
+			in:     `{"iss":"foo","sub":"bar","iat":"abc"}`, // strconv.ParseInt lỗi
+			expErr: errors.New("strconv.ParseInt: parsing \"abc\": invalid syntax"),
+		},
+		"unknown iat type": {
+			in:     `{"iss":"foo","sub":"bar","iat":true}`, // bool không phải string/number
+			expErr: fmt.Errorf("unknown timestamp type"),
 		},
 	}
 
-	for scenario, tc := range tcs {
-		tc := tc
-		t.Run(scenario, func(t *testing.T) {
-			t.Parallel()
-			// Given
+	for name, tc := range cases {
+		t.Run(name, func(t *testing.T) {
+			var c Claims
 
-			// When
-			var result Claims
-			err := json.Unmarshal([]byte(tc.in), &result)
+			err := json.Unmarshal([]byte(tc.in), &c)
 
-			// Then
 			if tc.expErr != nil {
 				require.EqualError(t, err, tc.expErr.Error())
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.expResult, result)
+				require.Equal(t, tc.expResult, c)
 			}
 		})
 	}

@@ -773,6 +773,53 @@ func (_c *MockRouter_Route_Call) RunAndReturn(run func(string, ...HandlerFunc) R
 	return _c
 }
 
+// Routes provides a mock function with no fields
+func (_m *MockRouter) Routes() RoutesInfo {
+	ret := _m.Called()
+
+	if len(ret) == 0 {
+		panic("no return value specified for Routes")
+	}
+
+	var r0 RoutesInfo
+	if rf, ok := ret.Get(0).(func() RoutesInfo); ok {
+		r0 = rf()
+	} else {
+		if ret.Get(0) != nil {
+			r0 = ret.Get(0).(RoutesInfo)
+		}
+	}
+
+	return r0
+}
+
+// MockRouter_Routes_Call is a *mock.Call that shadows Run/Return methods with type explicit version for method 'Routes'
+type MockRouter_Routes_Call struct {
+	*mock.Call
+}
+
+// Routes is a helper method to define mock.On call
+func (_e *MockRouter_Expecter) Routes() *MockRouter_Routes_Call {
+	return &MockRouter_Routes_Call{Call: _e.mock.On("Routes")}
+}
+
+func (_c *MockRouter_Routes_Call) Run(run func()) *MockRouter_Routes_Call {
+	_c.Call.Run(func(args mock.Arguments) {
+		run()
+	})
+	return _c
+}
+
+func (_c *MockRouter_Routes_Call) Return(_a0 RoutesInfo) *MockRouter_Routes_Call {
+	_c.Call.Return(_a0)
+	return _c
+}
+
+func (_c *MockRouter_Routes_Call) RunAndReturn(run func() RoutesInfo) *MockRouter_Routes_Call {
+	_c.Call.Return(run)
+	return _c
+}
+
 // StaticFS provides a mock function with given fields: relativePath, fs
 func (_m *MockRouter) StaticFS(relativePath string, fs http.FileSystem) Route {
 	ret := _m.Called(relativePath, fs)

@@ -81,6 +81,12 @@ func (r *router) Handler() http.Handler {
 	return r.engine.Handler()
 }
 
+func (r *router) Routes() (routes RoutesInfo) {
+	var routesInfo RoutesInfo
+	routesInfo.fromGinRoutesInfo(r.engine.Routes())
+	return routesInfo
+}
+
 type route struct {
 	routes gin.IRoutes
 }
@@ -187,5 +193,24 @@ func toGinHandler(h HandlerFunc) gin.HandlerFunc {
 			litCtx.Abort() // To skip all middleware after
 			litCtx.Error(err)
 		}
+	}
+}
+
+type RouteInfo struct {
+	Method string
+	Path   string
+}
+
+func (r *RouteInfo) fromGinRouteInfo(info gin.RouteInfo) {
+	r.Method = info.Method
+	r.Path = info.Path
+}
+
+type RoutesInfo []RouteInfo
+
+func (r *RoutesInfo) fromGinRoutesInfo(routesInfo gin.RoutesInfo) {
+	*r = make(RoutesInfo, len(routesInfo))
+	for idx, info := range routesInfo {
+		(*r)[idx].fromGinRouteInfo(info)
 	}
 }

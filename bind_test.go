@@ -3,9 +3,11 @@ package lit
 import (
 	"bytes"
 	"context"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -33,28 +35,28 @@ func TestLitContext_Bind(t *testing.T) {
 		"success json": {
 			givenContentType: "application/json",
 			givenRequestBody: `{
-				"id":1,
-				"equal":100,
-				"notequal":5,
-				"lessthan":30,
-				"lessthanequal":40,
-				"greaterthan":20,
-				"greaterthanequal":10,
-				"multi":15
-			}`,
+                "id":1,
+                "equal":100,
+                "notequal":5,
+                "lessthan":30,
+                "lessthanequal":40,
+                "greaterthan":20,
+                "greaterthanequal":10,
+                "multi":15
+            }`,
 			expectedErr: nil,
 		},
 		"got error json": {
 			givenContentType: "application/json",
 			givenRequestBody: `{
-				"equal":99,
-				"notequal":0,
-				"lessthan":60,
-				"lessthanequal":60,
-				"greaterthan":10,
-				"greaterthanequal":5,
-				"multi":30
-			}`,
+                "equal":99,
+                "notequal":0,
+                "lessthan":60,
+                "lessthanequal":60,
+                "greaterthan":10,
+                "greaterthanequal":5,
+                "multi":30
+            }`,
 			expectedErr: ValidationError{
 				"ID":               "The ID field is required",
 				"Equal":            "The Equal field must be 100",
@@ -106,6 +108,11 @@ func TestLitContext_Bind(t *testing.T) {
 				"Multi":            "The Multi field must be at least 10 but got 3",
 			},
 		},
+		"got unexpected error": {
+			givenContentType: "application/json",
+			givenRequestBody: "invalid json",
+			expectedErr:      errors.New("invalid character 'i' looking for beginning of value"),
+		},
 	}
 
 	for scenario, tc := range tcs {
@@ -122,6 +129,7 @@ func TestLitContext_Bind(t *testing.T) {
 
 			var compObj complexStruct
 
+			// Initialize localization
 			langBundle := i18n.Init(context.Background(), i18n.BundleConfig{
 				SourcePath: "i18n/testdata",
 			})
@@ -133,10 +141,34 @@ func TestLitContext_Bind(t *testing.T) {
 
 			// THEN
 			if tc.expectedErr != nil {
-				testutil.Equal(t, err, tc.expectedErr)
+				var validationErr ValidationError
+				if errors.As(tc.expectedErr, &validationErr) {
+					testutil.Equal(t, tc.expectedErr, err)
+					testutil.Equal(t, parseValidateErrorMessage(tc.expectedErr.Error()), parseValidateErrorMessage(err.Error()))
+				} else {
+					require.EqualError(t, err, tc.expectedErr.Error())
+				}
 			} else {
 				require.NoError(t, err)
 			}
 		})
 	}
+}
+
+func parseValidateErrorMessage(errMessage string) map[string]string {
+	rs := map[string]string{}
+	for _, field := range strings.Split(errMessage, "\n") {
+		keyValue := strings.Split(field, ":")
+		if len(keyValue) != 2 {
+			continue
+		}
+		rs[keyValue[0]] = keyValue[1]
+	}
+	return rs
+}
+
+func TestValidationError_StatusCode(t *testing.T) {
+	validateErr := ValidationError{}
+
+	require.Equal(t, http.StatusBadRequest, validateErr.StatusCode())
 }

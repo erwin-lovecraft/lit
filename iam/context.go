@@ -4,19 +4,16 @@ import (
 	"context"
 )
 
-type contextkey string
+type m2mProfileContextKey struct{}
 
-const (
-	contextKeyM2MProfile  = contextkey("m2m-profile")
-	contextKeyUserProfile = contextkey("user-profile")
-)
+type userProfileContextKey struct{}
 
 func SetM2MProfileInContext(ctx context.Context, profile M2MProfile) context.Context {
-	return context.WithValue(ctx, contextKeyM2MProfile, profile)
+	return context.WithValue(ctx, m2mProfileContextKey{}, profile)
 }
 
 func GetM2MProfileFromContext(ctx context.Context) M2MProfile {
-	if p, ok := ctx.Value(contextKeyM2MProfile).(M2MProfile); ok {
+	if p, ok := ctx.Value(m2mProfileContextKey{}).(M2MProfile); ok {
 		return p
 	}
 
@@ -24,11 +21,11 @@ func GetM2MProfileFromContext(ctx context.Context) M2MProfile {
 }
 
 func SetUserProfileInContext(ctx context.Context, profile UserProfile) context.Context {
-	return context.WithValue(ctx, contextKeyUserProfile, profile)
+	return context.WithValue(ctx, userProfileContextKey{}, profile)
 }
 
 func GetUserProfileFromContext(ctx context.Context) UserProfile {
-	if p, ok := ctx.Value(contextKeyUserProfile).(UserProfile); ok {
+	if p, ok := ctx.Value(userProfileContextKey{}).(UserProfile); ok {
 		return p
 	}
 

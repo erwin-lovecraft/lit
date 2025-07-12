@@ -25,3 +25,13 @@ packages:
         config:
       Pipeliner:
         config:
+  github.com/casbin/casbin/v2:
+    config:
+      dir: "mocks/mockcasbin"
+      mockname: "Mock{{.InterfaceName}}"
+      outpkg: "mockcasbin"
+      filename: "mock_{{.InterfaceName}}.go"
+      all: False
+    interfaces:
+      IEnforcer:
+        config:

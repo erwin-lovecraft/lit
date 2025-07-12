@@ -33,7 +33,7 @@ func newPostgresAdapter(db postgres.ContextExecutor) (persist.Adapter, error) {
 		return nil, pkgerrors.WithStack(err)
 	}
 
-	gormadapter.TurnOffAutoMigrate(gormDB)
+	//gormadapter.TurnOffAutoMigrate(gormDB)
 	a, err := gormadapter.NewAdapterByDBWithCustomTable(gormDB, &permission{}, permissionTableName)
 	if err != nil {
 		return nil, pkgerrors.WithStack(err)
