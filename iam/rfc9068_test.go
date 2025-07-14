@@ -2,9 +2,13 @@ package iam
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"strings"
 	"testing"
 	"time"
 
@@ -110,6 +114,133 @@ func TestRFC9068Validator_Validate(t *testing.T) {
 				}
 			}
 			mockClient.AssertExpectations(t)
+		})
+	}
+}
+
+func TestRFC9068Validator_fetchJWKS(t *testing.T) {
+	type args struct {
+		statusCode int
+		body       string
+		doErr      error
+	}
+	tests := map[string]struct {
+		args    args
+		expJWKS JWKSet
+		expErr  string
+	}{
+		"success": {
+			args: args{
+				statusCode: http.StatusOK,
+				body:       `{"keys":[]}`,
+				doErr:      nil,
+			},
+			expJWKS: JWKSet{Keys: []JWK{}},
+		},
+		"non-200 status": {
+			args:   args{statusCode: http.StatusInternalServerError, body: ``, doErr: nil},
+			expErr: "got unexpected status code: 500",
+		},
+		"invalid JSON": {
+			args:   args{statusCode: http.StatusOK, body: `{`, doErr: nil},
+			expErr: "could not decode jwks: unexpected EOF",
+		},
+		"http client error": {
+			args:   args{doErr: fmt.Errorf("network fail")},
+			expErr: "network fail",
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			mockClient := new(mockHTTPClient)
+			mockClient.
+				On("Do", mock.Anything).
+				Return(&http.Response{
+					StatusCode: tc.args.statusCode,
+					Body:       io.NopCloser(strings.NewReader(tc.args.body)),
+				}, tc.args.doErr)
+
+			validator := &rfc9068Validator{
+				jwksURI:    "http://example.com/jwks",
+				httpClient: mockClient,
+			}
+
+			// WHEN
+			jwks, err := validator.fetchJWKS(context.Background())
+
+			// THEN
+			if tc.expErr != "" {
+				require.EqualError(t, err, tc.expErr)
+			} else {
+				require.NoError(t, err)
+				require.Equal(t, tc.expJWKS, jwks)
+			}
+
+			mockClient.AssertExpectations(t)
+		})
+	}
+}
+
+func TestRFC9068Validator_processJWKS(t *testing.T) {
+	buildCertPEM := func() string {
+		data, err := os.ReadFile("testdata/sample_rsa_certificate")
+		require.NoError(t, err)
+		return strings.TrimPrefix(string(data), "-----BEGIN CERTIFICATE-----\n")
+	}
+
+	type args struct {
+		jwks JWKSet
+	}
+	tests := map[string]struct {
+		args      args
+		expMapLen int
+		expErr    string
+	}{
+		"no keys": {
+			args:   args{jwks: JWKSet{Keys: []JWK{}}},
+			expErr: "no appropriate JWK found",
+		},
+		"skip non-sig or non-RSA or missing fields": {
+			args: args{jwks: JWKSet{Keys: []JWK{
+				{Use: "enc", Kty: "RSA", KID: "k1", X5c: []string{buildCertPEM()}},
+				{Use: "sig", Kty: "EC", KID: "k2", X5c: []string{buildCertPEM()}},
+				{Use: "sig", Kty: "RSA", KID: "", X5c: []string{buildCertPEM()}},
+				{Use: "sig", Kty: "RSA", KID: "k4", X5c: []string{}},
+			}}},
+			expErr: "no appropriate JWK found",
+		},
+		"invalid PEM": {
+			args: args{jwks: JWKSet{Keys: []JWK{
+				{Use: "sig", Kty: "RSA", KID: "kid1", X5c: []string{"not-base64"}},
+			}}},
+			expErr: "could not parse certificate PEM",
+		},
+		"valid single": {
+			args: args{jwks: JWKSet{Keys: []JWK{
+				{Use: "sig", Kty: "RSA", KID: "kid1", X5c: []string{buildCertPEM()}},
+			}}},
+			expMapLen: 1,
+		},
+	}
+
+	for name, tc := range tests {
+		t.Run(name, func(t *testing.T) {
+			// GIVEN
+			validator := &rfc9068Validator{}
+
+			// WHEN
+			m, err := validator.processJWKS(context.Background(), tc.args.jwks)
+
+			// THEN
+			if tc.expErr != "" {
+				require.EqualError(t, err, tc.expErr)
+			} else {
+				require.NoError(t, err)
+				require.Len(t, m, tc.expMapLen)
+				require.Contains(t, m, "kid1")
+			}
 		})
 	}
 }

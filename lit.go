@@ -46,6 +46,8 @@ type Router interface {
 	//	}
 	Route(prefix string, middleware ...HandlerFunc) Router
 
+	Routes() RoutesInfo
+
 	// Handler returns http standard handler
 	Handler() http.Handler
 }
