@@ -84,7 +84,23 @@ const (
 	Pipe                   = "pipe"
 	MultiSubnetFailover    = "multisubnetfailover"
 	NoTraceID              = "notraceid"
+	GuidConversion         = "guid conversion"
+	Timezone               = "timezone"
 )
+
+type EncodeParameters struct {
+	// Properly convert GUIDs, using correct byte endianness
+	GuidConversion bool
+	// Timezone is the timezone to use for encoding and decoding datetime values.
+	Timezone *time.Location
+}
+
+func (e EncodeParameters) GetTimezone() *time.Location {
+	if e.Timezone == nil {
+		return time.UTC
+	}
+	return e.Timezone
+}
 
 type Config struct {
 	Port       uint64
@@ -141,6 +157,8 @@ type Config struct {
 	// When true, no connection id or trace id value is sent in the prelogin packet.
 	// Some cloud servers may block connections that lack such values.
 	NoTraceID bool
+	// Parameters related to type encoding
+	Encoding EncodeParameters
 }
 
 func readDERFile(filename string) ([]byte, error) {
@@ -293,6 +311,9 @@ func Parse(dsn string) (Config, error) {
 	p := Config{
 		ProtocolParameters: map[string]interface{}{},
 		Protocols:          []string{},
+		Encoding: EncodeParameters{
+			Timezone: time.UTC,
+		},
 	}
 
 	activityid, uerr := uuid.NewRandom()
@@ -315,6 +336,15 @@ func Parse(dsn string) (Config, error) {
 			return p, fmt.Errorf("invalid log parameter '%s': %s", strlog, err.Error())
 		}
 		p.LogFlags = Log(flags)
+	}
+
+	tz, ok := params[Timezone]
+	if ok {
+		location, err := time.LoadLocation(tz)
+		if err != nil {
+			return p, fmt.Errorf("invalid timezone '%s': %s", tz, err.Error())
+		}
+		p.Encoding.Timezone = location
 	}
 
 	p.Database = params[Database]
@@ -525,6 +555,20 @@ func Parse(dsn string) (Config, error) {
 			p.NoTraceID = notraceid
 		}
 	}
+
+	guidConversion, ok := params[GuidConversion]
+	if ok {
+		var err error
+		p.Encoding.GuidConversion, err = strconv.ParseBool(guidConversion)
+		if err != nil {
+			f := "invalid guid conversion '%s': %s"
+			return p, fmt.Errorf(f, guidConversion, err.Error())
+		}
+	} else {
+		// set to false for backward compatibility
+		p.Encoding.GuidConversion = false
+	}
+
 	return p, nil
 }
 
@@ -585,6 +629,15 @@ func (p Config) URL() *url.URL {
 	if p.ColumnEncryption {
 		q.Add("columnencryption", "true")
 	}
+
+	if p.Encoding.GuidConversion {
+		q.Add(GuidConversion, strconv.FormatBool(p.Encoding.GuidConversion))
+	}
+
+	if tz := p.Encoding.Timezone; tz != nil && tz != time.UTC {
+		q.Add(Timezone, tz.String())
+	}
+
 	if len(q) > 0 {
 		res.RawQuery = q.Encode()
 	}
@@ -601,6 +654,7 @@ var adoSynonyms = map[string]string{
 	"addr":                      Server,
 	"user":                      UserID,
 	"uid":                       UserID,
+	"pwd":                       Password,
 	"initial catalog":           Database,
 	"column encryption setting": "columnencryption",
 }

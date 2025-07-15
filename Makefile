@@ -8,6 +8,11 @@ DOCKER_BUILD_BIN := docker
 COMPOSE_BIN := ENV=$(ENV) GROUP_NAME=$(GROUP_NAME) PROJECT_NAME=$(PROJECT_NAME) docker compose
 COMPOSE_TOOL_RUN := $(COMPOSE_BIN) run --rm --service-ports tool
 
+mod:
+	go get -u ./...
+	go mod tidy
+	go mod vendor
+
 init: kafka pg redis
 	echo "Start Kafka, Postgres, and Redis!"
 
