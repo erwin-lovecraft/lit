@@ -15,7 +15,7 @@ import (
 	"github.com/viebiz/lit/testutil"
 )
 
-func TestLitContext_Bind(t *testing.T) {
+func TestLitContext_BindWithValidation(t *testing.T) {
 	type complexStruct struct {
 		ID               int `form:"id" json:"id" binding:"required"`
 		Equal            int `form:"equal" json:"equal" binding:"eq=100"`
@@ -171,4 +171,129 @@ func TestValidationError_StatusCode(t *testing.T) {
 	validateErr := ValidationError{}
 
 	require.Equal(t, http.StatusBadRequest, validateErr.StatusCode())
+}
+
+func TestListContext_Bind(t *testing.T) {
+	type givenArgs struct {
+		Method  string
+		URI     string
+		Body    []byte
+		Headers http.Header
+	}
+	type objectStruct struct {
+		ID   int    `uri:"id" form:"id" json:"id"`
+		Name string `uri:"name" form:"name" json:"name"`
+		Role string `uri:"role" form:"role" json:"role"`
+	}
+
+	tcs := map[string]struct {
+		rawPath   string
+		given     givenArgs
+		expResult objectStruct
+		expErr    error
+	}{
+		"success - mix type": {
+			rawPath: "/spacemarines/:id",
+			given: givenArgs{
+				Method: "PUT",
+				URI:    "/spacemarines/1604",
+				Body:   []byte(`{"name":"Erwin","role":"primarch"}`),
+				Headers: http.Header{
+					"Content-Type": []string{"application/json"},
+				},
+			},
+			expResult: objectStruct{
+				ID:   1604,
+				Name: "Erwin",
+				Role: "primarch",
+			},
+		},
+		"success - uri only": {
+			rawPath: "/spacemarines/:id/:name/:role",
+			given: givenArgs{
+				Method: "GET",
+				URI:    "/spacemarines/1/John/admin",
+				Body:   nil,
+			},
+			expResult: objectStruct{ID: 1, Name: "John", Role: "admin"},
+		},
+		"success - query only": {
+			rawPath: "/spacemarines",
+			given: givenArgs{
+				Method: "GET",
+				URI:    "/spacemarines?id=1&name=John&role=admin",
+				Body:   nil,
+			},
+			expResult: objectStruct{ID: 1, Name: "John", Role: "admin"},
+		},
+
+		"success - form only": {
+			rawPath: "/spacemarines/:id",
+			given: givenArgs{
+				Method:  "POST",
+				URI:     "/spacemarines/42",
+				Body:    []byte("name=Luther&role=tech"),
+				Headers: http.Header{"Content-Type": []string{"application/x-www-form-urlencoded"}},
+			},
+			expResult: objectStruct{ID: 42, Name: "Luther", Role: "tech"},
+		},
+
+		"error - invalid id": {
+			rawPath: "/spacemarines/:id",
+			given: givenArgs{
+				Method: "GET",
+				URI:    "/spacemarines/abc",
+				Body:   nil,
+			},
+			expErr: errors.New("strconv.ParseInt: parsing \"abc\": invalid syntax"),
+		},
+
+		"error - invalid JSON": {
+			rawPath: "/spacemarines/:id",
+			given: givenArgs{
+				Method:  "PUT",
+				URI:     "/spacemarines/7",
+				Body:    []byte(`{"name":`),
+				Headers: http.Header{"Content-Type": []string{"application/json"}},
+			},
+			expErr: errors.New("unexpected EOF"),
+		},
+	}
+
+	for scenario, tc := range tcs {
+		tc := tc
+		t.Run(scenario, func(t *testing.T) {
+			t.Parallel()
+
+			// Given
+			recorder := httptest.NewRecorder()
+			mockReq := httptest.NewRequest(tc.given.Method, tc.given.URI, bytes.NewBuffer(tc.given.Body))
+			if tc.given.Headers != nil {
+				mockReq.Header = tc.given.Headers
+			}
+
+			var (
+				actualResult objectStruct
+				actualErr    error
+			)
+
+			r, c, handleContext := NewRouterForTest(recorder)
+			r.Match([]string{tc.given.Method}, tc.rawPath, func(c Context) error {
+				actualErr = c.Bind(&actualResult)
+				return nil
+			})
+			c.SetRequest(mockReq)
+
+			// When
+			handleContext()
+
+			// Then
+			if tc.expErr == nil {
+				require.NoError(t, actualErr)
+				require.Equal(t, tc.expResult, actualResult)
+			} else {
+				require.EqualError(t, tc.expErr, actualErr.Error())
+			}
+		})
+	}
 }

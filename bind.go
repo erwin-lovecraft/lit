@@ -12,7 +12,12 @@ import (
 // Return error if the got error when binding and validating the object.
 // For more about validation tags refer to: `https://pkg.go.dev/github.com/go-playground/validator/v10#hdr-Baked_In_Validators_and_Tags`
 func (c litContext) Bind(obj interface{}) error {
-	// Read more at `https://gin-gonic.com/docs/examples/binding-and-validation`
+	if err := c.Context.ShouldBindUri(obj); err != nil {
+		var vErr validator.ValidationErrors
+		if !errors.As(err, &vErr) {
+			return err
+		}
+	}
 	if err := c.Context.ShouldBind(obj); err != nil {
 		return convertValidationErr(c, err)
 	}
