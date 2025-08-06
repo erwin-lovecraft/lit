@@ -54,6 +54,10 @@ type Client interface {
 	HashGetAll(ctx context.Context, key string, out interface{}) error
 
 	HashGetField(ctx context.Context, key string, field string, out interface{}) error
+
+	Publish(ctx context.Context, channel string, message interface{}) error
+
+	Subscribe(ctx context.Context, channels []string, handler MessageHandler) Subscriber
 }
 
 // Commander represents redis pipeline supported commands
