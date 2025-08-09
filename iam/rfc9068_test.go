@@ -277,6 +277,9 @@ func pointerTo[T any](v T) *T {
 //			ClientID:  "space_marine",
 //			JTI:       "GalacticPhantom",
 //		},
+//		ExtraClaims: map[string]interface{}{
+//			"https://lightning.app/roles": []string{"primarch"},
+//		},
 //	}
 //
 //	tk := jwt.NewToken(jwt.NewRS256(), claims)

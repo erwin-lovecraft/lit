@@ -25,7 +25,7 @@ func (guard AuthGuard) AuthenticateUserMiddleware() lit.HandlerFunc {
 		}
 
 		// 2. Validate access token
-		tk, err := guard.validator.Validate(getTokenString(c.Request()))
+		tk, err := guard.validator.Validate(tokenStr)
 		if err != nil {
 			return convertError(err)
 		}
@@ -47,7 +47,7 @@ func (guard AuthGuard) AuthenticateUserMiddleware() lit.HandlerFunc {
 
 		// 5. Continue handle request
 		c.Next()
-		
+
 		return nil
 	}
 }

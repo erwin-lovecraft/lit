@@ -107,7 +107,8 @@ func ExtractUserProfileFromClaims(claims Claims) (UserProfile, error) {
 	}
 
 	return UserProfile{
-		id:    sub,
-		roles: roles,
+		id:      sub,
+		roles:   roles,
+		profile: extractUserProfileFromClaims(claims),
 	}, nil
 }
