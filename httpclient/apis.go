@@ -1,7 +1,12 @@
 package httpclient
 
 import (
+	"context"
 	"net/http"
+	neturl "net/url"
+
+	"golang.org/x/oauth2"
+	"golang.org/x/oauth2/clientcredentials"
 )
 
 // NewSharedPool returns a new http.Client instance with customizable options, ensures
@@ -61,5 +66,29 @@ func NewWithAPIKey(cfg Config, pool *SharedCustomPool, apiKeyCfg APIKeyConfig, o
 		c.header.values = map[string]string{}
 	}
 	c.header.values[apiKeyCfg.Key] = apiKeyCfg.Value
+	return c, nil
+}
+
+// OAuthConfig is the config for OAUth
+type OAuthConfig struct {
+	TokenURL         string
+	ClientID         string
+	ClientSecret     string
+	ReceiverAudience string
+}
+
+// NewWithOAuth creates and returns a new Client instance with oauth authentication config
+func NewWithOAuth(cfg Config, pool *SharedCustomPool, oAuthCfg OAuthConfig, opts ...ClientOption) (*Client, error) {
+	c, err := newClient(pool.Client, cfg.URL, cfg.Method, cfg.ServiceName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	oauthCfg := clientcredentials.Config{
+		ClientID:       oAuthCfg.ClientID,
+		ClientSecret:   oAuthCfg.ClientSecret,
+		TokenURL:       oAuthCfg.TokenURL,
+		EndpointParams: neturl.Values{"audience": []string{oAuthCfg.ReceiverAudience}},
+	}
+	c.underlyingClient = oauthCfg.Client(context.WithValue(context.Background(), oauth2.HTTPClient, c.underlyingClient))
 	return c, nil
 }

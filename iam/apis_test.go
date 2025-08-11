@@ -148,7 +148,7 @@ func TestExtractUserProfileFromClaims(t *testing.T) {
 			claims: Claims{
 				RegisteredClaims: jwt.RegisteredClaims{Subject: "u1"},
 				ExtraClaims: map[string]interface{}{
-					"roles": "admin,user",
+					"https://lightning.app/roles": []string{"admin", "user"},
 				},
 			},
 			expResult: UserProfile{
