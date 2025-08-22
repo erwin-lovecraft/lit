@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	pkgerrors "github.com/pkg/errors"
 	"github.com/redis/go-redis/v9"
@@ -51,6 +52,8 @@ type MessageHandler func(ctx context.Context, msg Message) error
 
 type Subscriber interface {
 	Subscribe(ctx context.Context) error
+
+	SubscribeWithOptions(ctx context.Context, opts ChannelOption) error
 }
 
 type subscriber struct {
@@ -61,33 +64,41 @@ type subscriber struct {
 }
 
 func (s *subscriber) Subscribe(ctx context.Context) error {
-	subErr := make(chan error)
-	pubsub := s.rdb.SSubscribe(ctx, s.channels...)
-	go func() {
-		for {
-			if ctx.Err() != nil {
-				return
-			}
-			msg, err := pubsub.ReceiveMessage(ctx)
-			if err != nil {
-				subErr <- pkgerrors.Wrap(err, "receive message failed")
-				return
+	return s.SubscribeWithOptions(ctx, ChannelOption{
+		HealthCheckInterval: time.Minute,
+	})
+}
+
+func (s *subscriber) SubscribeWithOptions(ctx context.Context, opts ChannelOption) error {
+	ps := s.rdb.SSubscribe(ctx, s.channels...)
+	defer func() {
+		if err := ps.Close(); err != nil {
+			s.monitor.Errorf(err, "[redis_subscriber] Closing subscriber channels: %v", s.channels)
+		}
+		s.monitor.Infof("[redis_subscriber] closed")
+	}()
+
+	if _, err := ps.Receive(ctx); err != nil {
+		return pkgerrors.Wrap(err, "initial subscribe/receive failed")
+	}
+
+	s.monitor.Infof("[redis_subscriber] subscribed; channels=%v", s.channels)
+
+	chOpts := opts.toRedisOptions()
+	msgCh := ps.Channel(chOpts...)
+	for {
+		select {
+		case <-ctx.Done():
+			s.monitor.Infof("[redis_subscriber] context done → closing: %v", s.channels)
+			return nil
+		case msg, ok := <-msgCh:
+			if !ok {
+				s.monitor.Info("[redis_subscriber] message channel was closed by redis SDK")
+				return pkgerrors.New("channel was closed by redis SDK")
 			}
 
 			s.handleMessage(msg)
 		}
-	}()
-
-	select {
-	case err := <-subErr:
-		return err
-	case <-ctx.Done():
-		s.monitor.Infof("[redis_subscriber] Closing subscriber channels: %v", s.channels)
-		if err := pubsub.Close(); err != nil {
-			return pkgerrors.Wrap(err, "closing subscriber failed")
-		}
-		s.monitor.Infof("[redis_subscriber] Subscriber closed")
-		return nil
 	}
 }
 
