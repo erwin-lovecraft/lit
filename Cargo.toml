@@ -1,0 +1,27 @@
+[package]
+name = "lit-youtube-downloader"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Small async YouTube downloader experiment in Rust."
+
+[lib]
+name = "youtube_downloader"
+path = "src/lib.rs"
+
+[[bin]]
+name = "youtube-download"
+path = "src/bin/youtube-download.rs"
+
+[dependencies]
+futures-util = "0.3"
+regex = "1"
+reqwest = { version = "0.12", default-features = false, features = ["rustls-tls", "json", "stream"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+tokio = { version = "1", features = ["fs", "io-util", "macros", "net", "rt-multi-thread"] }
+url = "2"
+
+[dev-dependencies]
+tempfile = "3"
